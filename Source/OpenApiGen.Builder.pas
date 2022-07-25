@@ -1,7 +1,5 @@
 unit OpenApiGen.Builder;
 
-{$I XData.inc}
-
 interface
 
 uses
@@ -54,6 +52,7 @@ type
     FOptions: TBuilderOptions;
     function FindService(const Name: string): TMetaService;
     function FindMetaType(const Name: string): IMetaType;
+    function GetBaseUrl: string;
 
     procedure GenerateRestService;
     procedure GenerateServiceInterfaceMethod(CodeMethod: TCodeMemberMethod; MetaMethod: TMetaMethod);
@@ -456,6 +455,29 @@ begin
 
   if MetaMethod.ReturnType <> nil then
     CodeMethod.ReturnType.BaseType := MetaMethod.ReturnType.TypeName;
+end;
+
+function TOpenApiImporter.GetBaseUrl: string;
+begin
+  Result := Document.Host;
+  if EndsStr('/', Result) then
+    Result := Copy(Result, 1, Length(Result) - 1);
+  if not StartsStr('/', Document.BasePath) then
+    Result := Result + '/';
+  Result := Result + Document.BasePath;
+
+  if Pos('://', Result) = 0 then
+  begin
+    if TProtocol.Https in Document.Schemes then
+      Result := 'https://' + Result
+    else
+    if TProtocol.Http in Document.Schemes then
+      Result := 'http://' + Result
+    else
+      // hard code this, but it should use same scheme as the original
+      // OpenAPI document
+      Result := 'https://' + Result;
+  end;
 end;
 
 function TOpenApiImporter.CleanId(const S: string): string;
@@ -1409,6 +1431,9 @@ begin
 
   CodeType.AddFunction('Converter', 'TJsonConverter', mvProtected)
     .AddSnippet('Result := TJsonConverter(inherited Converter)');
+
+  CodeType.AddConstructor
+    .AddSnippetFmt('inherited Create(''%s'')', [GetBaseUrl]);
 end;
 
 procedure TOpenApiImporter.ProcessPathItem(const Path: string; PathItem: TPathItem);

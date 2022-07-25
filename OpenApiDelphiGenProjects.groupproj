@@ -1,0 +1,48 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{F1CB9E96-4606-45E4-BA2D-0C201E47F207}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="Source\OpenApiDelphiGen.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="Tests\OpenApiDelphiGenTests.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="OpenApiDelphiGen">
+        <MSBuild Projects="Source\OpenApiDelphiGen.dproj"/>
+    </Target>
+    <Target Name="OpenApiDelphiGen:Clean">
+        <MSBuild Projects="Source\OpenApiDelphiGen.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="OpenApiDelphiGen:Make">
+        <MSBuild Projects="Source\OpenApiDelphiGen.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="OpenApiDelphiGenTests">
+        <MSBuild Projects="Tests\OpenApiDelphiGenTests.dproj"/>
+    </Target>
+    <Target Name="OpenApiDelphiGenTests:Clean">
+        <MSBuild Projects="Tests\OpenApiDelphiGenTests.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="OpenApiDelphiGenTests:Make">
+        <MSBuild Projects="Tests\OpenApiDelphiGenTests.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="OpenApiDelphiGen;OpenApiDelphiGenTests"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="OpenApiDelphiGen:Clean;OpenApiDelphiGenTests:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="OpenApiDelphiGen:Make;OpenApiDelphiGenTests:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>

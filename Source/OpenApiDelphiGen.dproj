@@ -89,7 +89,7 @@
         <VerInfo_Locale>1033</VerInfo_Locale>
         <Manifest_File>(None)</Manifest_File>
         <AppDPIAwarenessMode>none</AppDPIAwarenessMode>
-        <Debugger_RunParams>-i:&quot;https://api.sandbox.nuvemfiscal.com.br/openapi/swagger.json&quot; -o:NuvemFiscal</Debugger_RunParams>
+        <Debugger_RunParams>-i:&quot;https://petstore.swagger.io/v2/swagger.json&quot; -o:&quot;..\..\..\Tests&quot; -n:PetStore</Debugger_RunParams>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2)'!=''">
         <DCC_LocalDebugSymbols>false</DCC_LocalDebugSymbols>
@@ -978,6 +978,9 @@
                 <Platform value="Win32">True</Platform>
                 <Platform value="Win64">False</Platform>
             </Platforms>
+            <UnitTesting>
+                <TestProjectName>D:\landgraf\openapi-delphi-generator\Tests\OpenApiDelphiGenTests.dproj</TestProjectName>
+            </UnitTesting>
         </BorlandProject>
         <ProjectFileVersion>12</ProjectFileVersion>
     </ProjectExtensions>
