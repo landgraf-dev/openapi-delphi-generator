@@ -125,6 +125,12 @@ type
     property OnServiceClassCreated: TTypeCreatedProc read FOnServiceClassCreated write FOnServiceClassCreated;
   end;
 
+const
+  MimeTypeJson = 'application/json';
+
+  HeaderContentType = 'Content-Type';
+  HeaderAccept = 'Accept';
+
 function ToPascalCase(const S: string): string;
 
 implementation
@@ -241,13 +247,24 @@ var
   MetaParam: TMetaParam;
   ErrorMsg: string;
   ListType: TListType;
+  ConsumesJson: Boolean;
+  ProducesJson: Boolean;
 begin
   Result := False;
   try
+    ConsumesJson := Operation.Consumes.Contains(MimeTypeJson);
+    ProducesJson := Operation.Produces.Contains(MimeTypeJson);
+
     Method.HttpMethod := HttpMethod;
     Method.UrlPath := Path;
     for Param in Operation.Parameters do
     begin
+      if Param.InBody then
+        if ConsumesJson then
+          Method.Consumes := MimeTypeJson
+        else
+          raise EOpenApiImportException.CreateFmt('Body parameter %s is present by method does not consume JSON', [Param.Name]);
+
       MetaParam := TMetaParam.Create;
       Method.Params.Add(MetaParam);
       BuildMetaParam(MetaParam, Param, Method.CodeName);
@@ -269,6 +286,11 @@ begin
           raise EOpenApiImportException.CreateFmt('Ambiguous response types: %s and %s', [ResponseType.TypeName, TargetResponseType.TypeName]);
       end;
     Method.ReturnType := ResponseType;
+    if (ResponseType <> nil) and not ResponseType.IsBinary then
+      if ProducesJson then
+        Method.Produces := MimeTypeJson
+      else
+        raise EOpenApiImportException.Create('Method returns data be method does not produce JSON');
     Result := True;
   except
     on E: EOpenApiImportException do
@@ -307,7 +329,11 @@ begin
         MetaParam.ParamType := MetaTypeFromSchema(Param.Schema, MethodName + Param.Name, TListType.ltAuto);
         MetaParam.Location := TParamLocation.plForm;
       end;
-//    Header: ;
+    Header:
+      begin
+        MetaParam.ParamType := MetaTypeFromSchema(Param.Schema, MethodName + Param.Name, TListType.ltAuto);
+        MetaParam.Location := TParamLocation.plHeader;
+      end;
   else
     raise EOpenApiImportException.CreateFmt('Unsupported parameter type: %s', [GetEnumName(TypeInfo(TLocation), Ord(Param.&In))]);
   end;
@@ -397,6 +423,11 @@ begin
           ParamValue := Param.ParamType.CodeToParam(Param.CodeName);
           Statements.AddSnippetFmt('Request.AddUrlParam(''%s'', %s)', [Param.RestName, ParamValue]);
         end;
+      TParamLocation.plHeader:
+        begin
+          ParamValue := Param.ParamType.CodeToParam(Param.CodeName);
+          Statements.AddSnippetFmt('Request.AddHeader(''%s'', %s)', [Param.RestName, ParamValue]);
+        end;
       TParamLocation.plBody:
         begin
           Statements.AddSnippetFmt('Request.AddBody(Converter.%s(%s))', [Param.ParamType.ToJsonFunctionName, Param.CodeName]);
@@ -404,6 +435,12 @@ begin
       TParamLocation.plForm:
         Statements.AddSnippetFmt('raise Exception.Create(''Form param ''''%s'''' not supported'')', [Param.CodeName]);
     end;
+
+  // Add mime types
+  if MetaMethod.Consumes <> '' then
+    Statements.AddSnippetFmt('Request.AddHeader(''%s'', ''%s'')', [HeaderContentType, MetaMethod.Consumes]);
+  if MetaMethod.Produces <> '' then
+    Statements.AddSnippetFmt('Request.AddHeader(''%s'', ''%s'')', [HeaderAccept, MetaMethod.Produces]);
 
   // read response
   CodeMethod.DeclareVar('Response', 'IRestResponse');

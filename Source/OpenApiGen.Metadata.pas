@@ -152,7 +152,7 @@ type
     property WrappedType: IMetaType read FWrappedType;
   end;
 
-  TParamLocation = (plQuery, plUrl, plBody, plForm);
+  TParamLocation = (plQuery, plUrl, plBody, plForm, plHeader);
 
   TMetaParam = class
   private
@@ -175,6 +175,8 @@ type
     FUrlPath: string;
     FHttpMethod: string;
     FIgnore: Boolean;
+    FProduces: string;
+    FConsumes: string;
   public
     constructor Create;
     destructor Destroy; override;
@@ -184,6 +186,8 @@ type
     property UrlPath: string read FUrlPath write FUrlPath;
     property ReturnType: IMetaType read FReturnType write FReturnType;
     property Ignore: Boolean read FIgnore write FIgnore;
+    property Consumes: string read FConsumes write FConsumes;
+    property Produces: string read FProduces write FProduces;
   end;
 
   TMetaService = class

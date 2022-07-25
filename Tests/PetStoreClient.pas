@@ -21,7 +21,7 @@ type
   end;
   
   IService = interface(IInvokable)
-    ['{7E7FD81D-9F7F-4ACA-98A8-A8CD48BA12DB}']
+    ['{B671860A-7BCD-4F07-84A6-FF6F2C98AC9C}']
     function UploadFile(PetId: Int64; AdditionalMetadata: string; &File: TBytes): TApiResponse;
     procedure UpdatePet(Body: TPet);
     procedure AddPet(Body: TPet);
@@ -29,6 +29,7 @@ type
     function FindPetsByTags(Tags: stringArray): TPetList;
     function GetPetById(PetId: Int64): TPet;
     procedure UpdatePetWithForm(PetId: Int64; Name: string; Status: string);
+    procedure DeletePet(ApiKey: string; PetId: Int64);
     function PlaceOrder(Body: TOrder): TOrder;
     function GetOrderById(OrderId: Int64): TOrder;
     procedure DeleteOrder(OrderId: Int64);
@@ -52,6 +53,7 @@ type
     function FindPetsByTags(Tags: stringArray): TPetList;
     function GetPetById(PetId: Int64): TPet;
     procedure UpdatePetWithForm(PetId: Int64; Name: string; Status: string);
+    procedure DeletePet(ApiKey: string; PetId: Int64);
     function PlaceOrder(Body: TOrder): TOrder;
     function GetOrderById(OrderId: Int64): TOrder;
     procedure DeleteOrder(OrderId: Int64);
@@ -96,6 +98,7 @@ begin
   Request.AddUrlParam('petId', IntToStr(PetId));
   raise Exception.Create('Form param ''AdditionalMetadata'' not supported');
   raise Exception.Create('Form param ''&File'' not supported');
+  Request.AddHeader('Accept', 'application/json');
   Response := Request.Execute;
   CheckError(Response);
   Result := Converter.TApiResponseFromJson(Response.ContentAsString);
@@ -108,6 +111,7 @@ var
 begin
   Request := CreateRequest('/pet', 'PUT');
   Request.AddBody(Converter.TPetToJson(Body));
+  Request.AddHeader('Content-Type', 'application/json');
   Response := Request.Execute;
   CheckError(Response);
 end;
@@ -119,6 +123,7 @@ var
 begin
   Request := CreateRequest('/pet', 'POST');
   Request.AddBody(Converter.TPetToJson(Body));
+  Request.AddHeader('Content-Type', 'application/json');
   Response := Request.Execute;
   CheckError(Response);
 end;
@@ -132,6 +137,7 @@ begin
   Request := CreateRequest('/pet/findByStatus', 'GET');
   for I := 0 to Length(Status) - 1 do
     Request.AddQueryParam('status', Status[I]);
+  Request.AddHeader('Accept', 'application/json');
   Response := Request.Execute;
   CheckError(Response);
   Result := Converter.TPetListFromJson(Response.ContentAsString);
@@ -146,6 +152,7 @@ begin
   Request := CreateRequest('/pet/findByTags', 'GET');
   for I := 0 to Length(Tags) - 1 do
     Request.AddQueryParam('tags', Tags[I]);
+  Request.AddHeader('Accept', 'application/json');
   Response := Request.Execute;
   CheckError(Response);
   Result := Converter.TPetListFromJson(Response.ContentAsString);
@@ -158,6 +165,7 @@ var
 begin
   Request := CreateRequest('/pet/{petId}', 'GET');
   Request.AddUrlParam('petId', IntToStr(PetId));
+  Request.AddHeader('Accept', 'application/json');
   Response := Request.Execute;
   CheckError(Response);
   Result := Converter.TPetFromJson(Response.ContentAsString);
@@ -176,6 +184,18 @@ begin
   CheckError(Response);
 end;
 
+procedure TService.DeletePet(ApiKey: string; PetId: Int64);
+var
+  Request: IRestRequest;
+  Response: IRestResponse;
+begin
+  Request := CreateRequest('/pet/{petId}', 'DELETE');
+  Request.AddHeader('api_key', ApiKey);
+  Request.AddUrlParam('petId', IntToStr(PetId));
+  Response := Request.Execute;
+  CheckError(Response);
+end;
+
 function TService.PlaceOrder(Body: TOrder): TOrder;
 var
   Request: IRestRequest;
@@ -183,6 +203,8 @@ var
 begin
   Request := CreateRequest('/store/order', 'POST');
   Request.AddBody(Converter.TOrderToJson(Body));
+  Request.AddHeader('Content-Type', 'application/json');
+  Request.AddHeader('Accept', 'application/json');
   Response := Request.Execute;
   CheckError(Response);
   Result := Converter.TOrderFromJson(Response.ContentAsString);
@@ -195,6 +217,7 @@ var
 begin
   Request := CreateRequest('/store/order/{orderId}', 'GET');
   Request.AddUrlParam('orderId', IntToStr(OrderId));
+  Request.AddHeader('Accept', 'application/json');
   Response := Request.Execute;
   CheckError(Response);
   Result := Converter.TOrderFromJson(Response.ContentAsString);
@@ -217,6 +240,7 @@ var
   Response: IRestResponse;
 begin
   Request := CreateRequest('/store/inventory', 'GET');
+  Request.AddHeader('Accept', 'application/json');
   Response := Request.Execute;
   CheckError(Response);
   Result := Converter.TGetInventoryOutputFromJson(Response.ContentAsString);
@@ -229,6 +253,7 @@ var
 begin
   Request := CreateRequest('/user/createWithArray', 'POST');
   Request.AddBody(Converter.TUserListToJson(Body));
+  Request.AddHeader('Content-Type', 'application/json');
   Response := Request.Execute;
   CheckError(Response);
 end;
@@ -240,6 +265,7 @@ var
 begin
   Request := CreateRequest('/user/createWithList', 'POST');
   Request.AddBody(Converter.TUserListToJson(Body));
+  Request.AddHeader('Content-Type', 'application/json');
   Response := Request.Execute;
   CheckError(Response);
 end;
@@ -251,6 +277,7 @@ var
 begin
   Request := CreateRequest('/user/{username}', 'GET');
   Request.AddUrlParam('username', Username);
+  Request.AddHeader('Accept', 'application/json');
   Response := Request.Execute;
   CheckError(Response);
   Result := Converter.TUserFromJson(Response.ContentAsString);
@@ -264,6 +291,7 @@ begin
   Request := CreateRequest('/user/{username}', 'PUT');
   Request.AddUrlParam('username', Username);
   Request.AddBody(Converter.TUserToJson(Body));
+  Request.AddHeader('Content-Type', 'application/json');
   Response := Request.Execute;
   CheckError(Response);
 end;
@@ -287,6 +315,7 @@ begin
   Request := CreateRequest('/user/login', 'GET');
   Request.AddQueryParam('username', Username);
   Request.AddQueryParam('password', Password);
+  Request.AddHeader('Accept', 'application/json');
   Response := Request.Execute;
   CheckError(Response);
   Result := Converter.stringFromJson(Response.ContentAsString);
@@ -309,6 +338,7 @@ var
 begin
   Request := CreateRequest('/user', 'POST');
   Request.AddBody(Converter.TUserToJson(Body));
+  Request.AddHeader('Content-Type', 'application/json');
   Response := Request.Execute;
   CheckError(Response);
 end;
