@@ -69,3 +69,5 @@ __recovery/
 modules/
 Source/OpenApiDelphiGen.res
 Source/version.res
+Tests/Win32/Debug/dunit.ini
+Tests/OpenApiDelphiGenTests.res

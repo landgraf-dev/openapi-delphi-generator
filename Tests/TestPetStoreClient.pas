@@ -1,0 +1,89 @@
+unit TestPetStoreClient;
+
+interface
+
+uses
+  SysUtils, TestFramework, PetStoreClient, PetStoreDtos;
+
+type
+  TPetStoreClientTests = class(TTestCase)
+  published
+    procedure CreateAndGetPet;
+  end;
+
+implementation
+
+{ TPetStoreClientTests }
+
+procedure TPetStoreClientTests.CreateAndGetPet;
+const
+  PetId = 61341;
+  CategoryId = 61341;
+  TagId = 61341;
+var
+  Pet: TPet;
+  Tag: TTag;
+  Service: IService;
+begin
+  Service := TService.Create;
+
+  // Create the pet
+  Pet := TPet.Create;
+  try
+    Pet.Id := PetId;
+    Pet.Name := 'Josephine';
+    Pet.Status := 'available';
+
+    Pet.Category := TCategory.Create;
+    Pet.Category.Id := CategoryId;
+    Pet.Category.Name := 'Terrier Dogs';
+
+    Pet.Tags := TTagList.Create;
+    Tag := TTag.Create;
+    Tag.Id := TagId;
+    Tag.Name := 'Terrier';
+    Pet.Tags.Add(Tag);
+
+    Pet.PhotoUrls.Add('http://dummy.com/dog.png');
+    Service.AddPet(Pet);
+  finally
+    Pet.Free;
+  end;
+
+  // Now pet should exist
+  Pet := Service.GetPetById(PetId);
+  try
+    Check(Pet <> nil, Format('Pet %d not found', [PetId]));
+    CheckEquals(PetId, Pet.Id);
+    CheckEquals('Josephine', Pet.Name);
+    CheckEquals('available', Pet.Status);
+
+    Check(Pet.Category <> nil, 'Category is nil');
+    CheckEquals(CategoryId, Pet.Category.Id);
+    CheckEquals('Terrier Dogs', Pet.Category.Name);
+
+    Check(Pet.Tags <> nil, 'Tags is nil');
+    CheckEquals(1, Pet.Tags.Count);
+    CheckEquals(TagId, Pet.Tags[0].Id);
+    Checkequals('Terrier', Pet.Tags[0].Name);
+
+    CheckEquals(1, Pet.PhotoUrls.Count);
+    CheckEquals('http://dummy.com/dog.png', Pet.PhotoUrls[0]);
+  finally
+    Pet.Free;
+  end;
+
+//   Make sure pet does not exist
+//  Pet := Service.GetPetById(PetId);
+//  try
+//    Check(Pet = nil, Format('Pet %d should not exist', [PetId]));
+//  finally
+//    Pet.Free;
+//  end;
+
+end;
+
+initialization
+  RegisterTest(TPetStoreClientTests.Suite);
+
+end.
