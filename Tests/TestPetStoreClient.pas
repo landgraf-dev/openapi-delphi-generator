@@ -3,7 +3,7 @@ unit TestPetStoreClient;
 interface
 
 uses
-  SysUtils, TestFramework, PetStoreClient, PetStoreDtos;
+  SysUtils, TestFramework, PetStoreClient, PetStoreDtos, OpenApiRest;
 
 type
   TPetStoreClientTests = class(TTestCase)
@@ -73,14 +73,18 @@ begin
     Pet.Free;
   end;
 
-//   Make sure pet does not exist
-//  Pet := Service.GetPetById(PetId);
-//  try
-//    Check(Pet = nil, Format('Pet %d should not exist', [PetId]));
-//  finally
-//    Pet.Free;
-//  end;
+  // Delete the newly created pet
+  Service.DeletePet('special-key', PetId);
 
+  // Make sure pet does not exist anymore
+  try
+    Pet := Service.GetPetById(PetId);
+    Pet.Free;
+    Check(False, 'Exception not raised');
+  except
+    on E: EOpenApiClientException do
+      CheckEquals(404, E.Response.StatusCode);
+  end;
 end;
 
 initialization

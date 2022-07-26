@@ -20,6 +20,7 @@ type
     procedure SetMethod(const Method: string);
     procedure AddQueryParam(const Name, Value: string);
     procedure AddUrlParam(const Name, Value: string);
+    procedure AddHeader(const Name, Value: string);
     procedure AddBody(const Value: string);
     function Execute: IRestResponse;
   end;
@@ -35,17 +36,20 @@ type
     FMethod: string;
     FQueryParams: TStrings;
     FUrlParams: TStrings;
+    FHeaders: TStrings;
     FBody: string;
   protected
     function BuildUrl: string;
     function PercentEncode(const Value: string): string; virtual;
     property Body: string read FBody;
     property Method: string read FMethod;
+    property Headers: TStrings read FHeaders;
   public
     constructor Create;
     destructor Destroy; override;
     procedure SetUrl(const Url: string);
     procedure SetMethod(const Method: string);
+    procedure AddHeader(const Name, Value: string);
     procedure AddQueryParam(const Name, Value: string); virtual;
     procedure AddUrlParam(const Name, Value: string); virtual;
     procedure AddBody(const Value: string); virtual;
@@ -151,6 +155,11 @@ begin
   FBody := Value;
 end;
 
+procedure TRestRequest.AddHeader(const Name, Value: string);
+begin
+  FHeaders.Values[Name] := Value;
+end;
+
 procedure TRestRequest.AddQueryParam(const Name, Value: string);
 begin
   FQueryParams.Values[Name] := Value;
@@ -195,10 +204,12 @@ begin
   inherited Create;
   FQueryParams := TStringList.Create;
   FUrlParams := TStringList.Create;
+  FHeaders := TStringList.Create;
 end;
 
 destructor TRestRequest.Destroy;
 begin
+  FHeaders.Free;
   FUrlParams.Free;
   FQueryParams.Free;
   inherited;
@@ -231,6 +242,7 @@ begin
   Content := Response.ContentAsString;
   if Content <> '' then
     ErrorMsg := ErrorMsg + sLineBreak + 'Response: ' + Copy(Content, 1, 512);
+  FResponse := Response;
   inherited Create(ErrorMsg);
 end;
 

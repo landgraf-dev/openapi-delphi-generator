@@ -48,6 +48,7 @@ var
   Client: THttpClient;
   SourceStream: TStream;
   Content: TBytesStream;
+  I: Integer;
 begin
   Client := THttpClient.Create;
   try
@@ -56,6 +57,9 @@ begin
       SourceStream := TStringStream.Create(Body, TEncoding.UTF8, False)
     else
       SourceStream := nil;
+    for I := 0 to Headers.Count - 1 do
+      Request.SetHeaderValue(Headers.Names[I], Headers.ValueFromIndex[I]);
+
     try
       Request.SourceStream := SourceStream;
       Content := TBytesStream.Create;

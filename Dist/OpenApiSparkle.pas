@@ -45,6 +45,7 @@ var
   Request: THttpRequest;
   Response: IHttpResponse;
   Client: THttpClient;
+  I: Integer;
 begin
   Client := THttpClient.Create;
   try
@@ -54,6 +55,9 @@ begin
       Request.Method := Self.Method;
       if Body <> '' then
         Request.SetContent(TEncoding.UTF8.GetBytes(Body));
+      for I := 0 to Headers.Count - 1 do
+        Request.Headers.SetValue(Headers.Names[I], Headers.ValueFromIndex[I]);
+
       Response := Client.Send(Request);
       Result := TSparkleRestResponse.Create(Response, Client);
       Client := nil;
