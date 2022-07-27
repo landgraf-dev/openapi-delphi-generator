@@ -8,7 +8,7 @@ The generator creates the DTO classes (representing the JSON definitions used by
 
 ## Usage
 
-The generator is a single command-line exe file named `OpenApiDelphiGen.exe`. Just download it to any folder of your computer and execute it passing the proper command-line parameters. The tool provides a help file showing you all the available options.
+[Download the binaries](https://github.com/landgraf-dev/openapi-delphi-generator/releases) and decompress in a folder in your disk. The generator is a single command-line exe file named `OpenApiDelphiGen.exe`. Execute it passing the proper command-line parameters. The tool provides a help file showing you all the available options.
 
 ### Generating the client
 
