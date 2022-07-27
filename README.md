@@ -28,7 +28,7 @@ The generator will create the following units:
 
 ### Using the client
 
-To use the client, just add the generated units to your uses classes and instantiate the interfaces. Note that the generated code depends on the units provided in the Dist folder, so you must also add them to your project.
+To use the client, just add the generated units to your uses classes and instantiate the interfaces. Note that the generated code depends on the units provided in the [Dist](Dist) folder, so you must also add them to your project.
 
 Once you instantiate a service, just call a method to invoke an endpoint. The following example will create a new pet in the server by invoking the `POST /Pets`  endpoint:
 
