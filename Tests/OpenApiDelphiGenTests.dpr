@@ -15,7 +15,14 @@ program OpenApiDelphiGenTests;
 {$ENDIF}
 
 uses
-  DUnitTestRunner;
+  DUnitTestRunner,
+  TestPetStoreClient in 'TestPetStoreClient.pas',
+  OpenApiJson in '..\Dist\OpenApiJson.pas',
+  OpenApiRest in '..\Dist\OpenApiRest.pas',
+  OpenApiHttp in '..\Dist\OpenApiHttp.pas',
+  PetStoreDtos in 'PetStore\PetStoreDtos.pas',
+  PetStoreJson in 'PetStore\PetStoreJson.pas',
+  PetStoreClient in 'PetStore\PetStoreClient.pas';
 
 {$R *.RES}
 
