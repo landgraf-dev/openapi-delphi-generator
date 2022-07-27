@@ -23,9 +23,9 @@ const
 var
   Pet: TPet;
   Tag: TTag;
-  Service: IService;
+  Service: IPetService;
 begin
-  Service := TService.Create;
+  Service := TPetService.Create;
 
   // Create the pet
   Pet := TPet.Create;

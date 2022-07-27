@@ -10,7 +10,9 @@ uses
 
 type
   TRestService = class;
-  TService = class;
+  TPetService = class;
+  TStoreService = class;
+  TUserService = class;
   
   TRestService = class(TCustomRestService)
   protected
@@ -20,8 +22,8 @@ type
     constructor Create;
   end;
   
-  IService = interface(IInvokable)
-    ['{B671860A-7BCD-4F07-84A6-FF6F2C98AC9C}']
+  IPetService = interface(IInvokable)
+    ['{068D6C7E-07CF-438B-9306-42E6B86536B6}']
     function UploadFile(PetId: Int64; AdditionalMetadata: string; &File: TBytes): TApiResponse;
     procedure UpdatePet(Body: TPet);
     procedure AddPet(Body: TPet);
@@ -30,10 +32,38 @@ type
     function GetPetById(PetId: Int64): TPet;
     procedure UpdatePetWithForm(PetId: Int64; Name: string; Status: string);
     procedure DeletePet(ApiKey: string; PetId: Int64);
+  end;
+  
+  TPetService = class(TRestService, IPetService)
+  public
+    function UploadFile(PetId: Int64; AdditionalMetadata: string; &File: TBytes): TApiResponse;
+    procedure UpdatePet(Body: TPet);
+    procedure AddPet(Body: TPet);
+    function FindPetsByStatus(Status: stringArray): TPetList;
+    function FindPetsByTags(Tags: stringArray): TPetList;
+    function GetPetById(PetId: Int64): TPet;
+    procedure UpdatePetWithForm(PetId: Int64; Name: string; Status: string);
+    procedure DeletePet(ApiKey: string; PetId: Int64);
+  end;
+  
+  IStoreService = interface(IInvokable)
+    ['{55DDD78A-6C80-4FE5-A1C3-BECDC07F6053}']
     function PlaceOrder(Body: TOrder): TOrder;
     function GetOrderById(OrderId: Int64): TOrder;
     procedure DeleteOrder(OrderId: Int64);
     function GetInventory: TGetInventoryOutput;
+  end;
+  
+  TStoreService = class(TRestService, IStoreService)
+  public
+    function PlaceOrder(Body: TOrder): TOrder;
+    function GetOrderById(OrderId: Int64): TOrder;
+    procedure DeleteOrder(OrderId: Int64);
+    function GetInventory: TGetInventoryOutput;
+  end;
+  
+  IUserService = interface(IInvokable)
+    ['{B0343463-453E-405F-B1B7-33FFD33C7415}']
     procedure CreateUsersWithArrayInput(Body: TUserList);
     procedure CreateUsersWithListInput(Body: TUserList);
     function GetUserByName(Username: string): TUser;
@@ -44,20 +74,8 @@ type
     procedure CreateUser(Body: TUser);
   end;
   
-  TService = class(TRestService, IService)
+  TUserService = class(TRestService, IUserService)
   public
-    function UploadFile(PetId: Int64; AdditionalMetadata: string; &File: TBytes): TApiResponse;
-    procedure UpdatePet(Body: TPet);
-    procedure AddPet(Body: TPet);
-    function FindPetsByStatus(Status: stringArray): TPetList;
-    function FindPetsByTags(Tags: stringArray): TPetList;
-    function GetPetById(PetId: Int64): TPet;
-    procedure UpdatePetWithForm(PetId: Int64; Name: string; Status: string);
-    procedure DeletePet(ApiKey: string; PetId: Int64);
-    function PlaceOrder(Body: TOrder): TOrder;
-    function GetOrderById(OrderId: Int64): TOrder;
-    procedure DeleteOrder(OrderId: Int64);
-    function GetInventory: TGetInventoryOutput;
     procedure CreateUsersWithArrayInput(Body: TUserList);
     procedure CreateUsersWithListInput(Body: TUserList);
     function GetUserByName(Username: string): TUser;
@@ -87,9 +105,9 @@ begin
   inherited Create('https://petstore.swagger.io/v2');
 end;
 
-{ TService }
+{ TPetService }
 
-function TService.UploadFile(PetId: Int64; AdditionalMetadata: string; &File: TBytes): TApiResponse;
+function TPetService.UploadFile(PetId: Int64; AdditionalMetadata: string; &File: TBytes): TApiResponse;
 var
   Request: IRestRequest;
   Response: IRestResponse;
@@ -104,7 +122,7 @@ begin
   Result := Converter.TApiResponseFromJson(Response.ContentAsString);
 end;
 
-procedure TService.UpdatePet(Body: TPet);
+procedure TPetService.UpdatePet(Body: TPet);
 var
   Request: IRestRequest;
   Response: IRestResponse;
@@ -116,7 +134,7 @@ begin
   CheckError(Response);
 end;
 
-procedure TService.AddPet(Body: TPet);
+procedure TPetService.AddPet(Body: TPet);
 var
   Request: IRestRequest;
   Response: IRestResponse;
@@ -128,7 +146,7 @@ begin
   CheckError(Response);
 end;
 
-function TService.FindPetsByStatus(Status: stringArray): TPetList;
+function TPetService.FindPetsByStatus(Status: stringArray): TPetList;
 var
   Request: IRestRequest;
   I: Integer;
@@ -143,7 +161,7 @@ begin
   Result := Converter.TPetListFromJson(Response.ContentAsString);
 end;
 
-function TService.FindPetsByTags(Tags: stringArray): TPetList;
+function TPetService.FindPetsByTags(Tags: stringArray): TPetList;
 var
   Request: IRestRequest;
   I: Integer;
@@ -158,7 +176,7 @@ begin
   Result := Converter.TPetListFromJson(Response.ContentAsString);
 end;
 
-function TService.GetPetById(PetId: Int64): TPet;
+function TPetService.GetPetById(PetId: Int64): TPet;
 var
   Request: IRestRequest;
   Response: IRestResponse;
@@ -171,7 +189,7 @@ begin
   Result := Converter.TPetFromJson(Response.ContentAsString);
 end;
 
-procedure TService.UpdatePetWithForm(PetId: Int64; Name: string; Status: string);
+procedure TPetService.UpdatePetWithForm(PetId: Int64; Name: string; Status: string);
 var
   Request: IRestRequest;
   Response: IRestResponse;
@@ -184,7 +202,7 @@ begin
   CheckError(Response);
 end;
 
-procedure TService.DeletePet(ApiKey: string; PetId: Int64);
+procedure TPetService.DeletePet(ApiKey: string; PetId: Int64);
 var
   Request: IRestRequest;
   Response: IRestResponse;
@@ -196,7 +214,9 @@ begin
   CheckError(Response);
 end;
 
-function TService.PlaceOrder(Body: TOrder): TOrder;
+{ TStoreService }
+
+function TStoreService.PlaceOrder(Body: TOrder): TOrder;
 var
   Request: IRestRequest;
   Response: IRestResponse;
@@ -210,7 +230,7 @@ begin
   Result := Converter.TOrderFromJson(Response.ContentAsString);
 end;
 
-function TService.GetOrderById(OrderId: Int64): TOrder;
+function TStoreService.GetOrderById(OrderId: Int64): TOrder;
 var
   Request: IRestRequest;
   Response: IRestResponse;
@@ -223,7 +243,7 @@ begin
   Result := Converter.TOrderFromJson(Response.ContentAsString);
 end;
 
-procedure TService.DeleteOrder(OrderId: Int64);
+procedure TStoreService.DeleteOrder(OrderId: Int64);
 var
   Request: IRestRequest;
   Response: IRestResponse;
@@ -234,7 +254,7 @@ begin
   CheckError(Response);
 end;
 
-function TService.GetInventory: TGetInventoryOutput;
+function TStoreService.GetInventory: TGetInventoryOutput;
 var
   Request: IRestRequest;
   Response: IRestResponse;
@@ -246,7 +266,9 @@ begin
   Result := Converter.TGetInventoryOutputFromJson(Response.ContentAsString);
 end;
 
-procedure TService.CreateUsersWithArrayInput(Body: TUserList);
+{ TUserService }
+
+procedure TUserService.CreateUsersWithArrayInput(Body: TUserList);
 var
   Request: IRestRequest;
   Response: IRestResponse;
@@ -258,7 +280,7 @@ begin
   CheckError(Response);
 end;
 
-procedure TService.CreateUsersWithListInput(Body: TUserList);
+procedure TUserService.CreateUsersWithListInput(Body: TUserList);
 var
   Request: IRestRequest;
   Response: IRestResponse;
@@ -270,7 +292,7 @@ begin
   CheckError(Response);
 end;
 
-function TService.GetUserByName(Username: string): TUser;
+function TUserService.GetUserByName(Username: string): TUser;
 var
   Request: IRestRequest;
   Response: IRestResponse;
@@ -283,7 +305,7 @@ begin
   Result := Converter.TUserFromJson(Response.ContentAsString);
 end;
 
-procedure TService.UpdateUser(Username: string; Body: TUser);
+procedure TUserService.UpdateUser(Username: string; Body: TUser);
 var
   Request: IRestRequest;
   Response: IRestResponse;
@@ -296,7 +318,7 @@ begin
   CheckError(Response);
 end;
 
-procedure TService.DeleteUser(Username: string);
+procedure TUserService.DeleteUser(Username: string);
 var
   Request: IRestRequest;
   Response: IRestResponse;
@@ -307,7 +329,7 @@ begin
   CheckError(Response);
 end;
 
-function TService.LoginUser(Username: string; Password: string): string;
+function TUserService.LoginUser(Username: string; Password: string): string;
 var
   Request: IRestRequest;
   Response: IRestResponse;
@@ -321,7 +343,7 @@ begin
   Result := Converter.stringFromJson(Response.ContentAsString);
 end;
 
-procedure TService.LogoutUser;
+procedure TUserService.LogoutUser;
 var
   Request: IRestRequest;
   Response: IRestResponse;
@@ -331,7 +353,7 @@ begin
   CheckError(Response);
 end;
 
-procedure TService.CreateUser(Body: TUser);
+procedure TUserService.CreateUser(Body: TUser);
 var
   Request: IRestRequest;
   Response: IRestResponse;

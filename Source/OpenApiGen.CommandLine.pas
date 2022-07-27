@@ -33,6 +33,13 @@ begin
     begin
       Options.ClientName := Value;
     end);
+
+  option := TOptionsRegistry.RegisterOption<TServiceSolvingMode>('mode', 'm',
+    'Options: SingleClientFromOperationId, MultipleClientsFromFirstTagAndOperationId',
+    procedure(const Value : TServiceSolvingMode)
+    begin
+      Options.ServiceOptions.SolvingMode := Value;
+    end);
 end;
 
 function ParseCommandLine(GenOptions: TGeneratorOptions; Options: TBuilderOptions): Boolean;
