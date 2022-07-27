@@ -37,6 +37,7 @@ type
     FLogger: ILogger;
     FOnGetMethodName: TGetIdentifierProc;
     FOnGetTypeName: TGetIdentifierProc;
+    FOnGetServiceName: TGetIdentifierProc;
     FOnGetPropName: TGetIdentifierProc;
     FOnGetFieldName: TGetIdentifierProc;
     FOnGetInterfaceName: TGetIdentifierProc;
@@ -47,14 +48,13 @@ type
     FOnTypeCreated: TTypeCreatedProc;
     FOnServiceInterfaceCreated: TTypeCreatedProc;
     FOnServiceClassCreated: TTypeCreatedProc;
-    FMetaTypes: TList<IMetaType>;
-    FServices: TList<TMetaService>;
     FOptions: TBuilderOptions;
-    function FindService(const Name: string): TMetaService;
-    function FindMetaType(const Name: string): IMetaType;
+    FMetaClient: TMetaClient;
     function GetBaseUrl: string;
 
+    procedure GenerateClient;
     procedure GenerateRestService;
+    procedure GenerateConfig;
     procedure GenerateServiceInterfaceMethod(CodeMethod: TCodeMemberMethod; MetaMethod: TMetaMethod);
     procedure GenerateServiceClassMethod(CodeMethod: TCodeMemberMethod; MetaMethod: TMetaMethod);
     function GenerateMethodParam(CodeMethod: TCodeMemberMethod; MetaParam: TMetaParam): TCodeParameterDeclaration;
@@ -96,6 +96,7 @@ type
     procedure DoGetFieldName(var FieldName: string; const Original: string);
     procedure DoGetMethodName(var MethodName: string; const Original: string);
     procedure DoGetTypeName(var TypeName: string; const Original: string);
+    procedure DoGetServiceName(var ServiceName: string; const Original: string);
     procedure DoGetInterfaceName(var InterfaceName: string; const Original: string);
     procedure DoGetServiceClassName(var ServiceClassName: string; const Original: string);
     procedure DoMethodCreated(Method: TCodeMemberMethod; Parent: TCodeTypeDeclaration);
@@ -114,6 +115,7 @@ type
     property Document: TOpenApiDocument read FDocument;
     property OnGetMethodName: TGetIdentifierProc read FOnGetMethodName write FOnGetMethodName;
     property OnGetTypeName: TGetIdentifierProc read FOnGetTypeName write FOnGetTypeName;
+    property OnGetServiceName: TGetIdentifierProc read FOnGetServiceName write FOnGetServiceName;
     property OnGetPropName: TGetIdentifierProc read FOnGetPropName write FOnGetPropName;
     property OnGetFieldName: TGetIdentifierProc read FOnGetFieldName write FOnGetFieldName;
     property OnGetInterfaceName: TGetIdentifierProc read FOnGetInterfaceName write FOnGetInterfaceName;
@@ -181,8 +183,20 @@ var
   Service: TMetaService;
 begin
   FDocument := ADocument;
-  RecreateCodeUnits;
 
+  // Build meta information
+  FMetaClient.Clear;
+  for Definition in Document.Definitions do
+    MetaTypeFromSchema(Definition.Value, Definition.Key, TListType.ltAuto);
+  for Path in Document.Paths do
+    ProcessPathItem(Path.Key, Path.Value);
+  FMetaClient.InterfaceName := Format('I%sClient', [Options.ClientName]);
+  FMetaClient.ClientClass := Format('T%sClient', [Options.ClientName]);
+  FMetaClient.ConfigClass := Format('T%sConfig', [Options.ClientName]);
+  FMetaClient.BaseUrl := GetBaseUrl;
+
+  // Generate code units
+  RecreateCodeUnits;
   if Options.XDataService then
   begin
     FClientUnit.UseUnit('System.Generics.Collections');
@@ -206,17 +220,8 @@ begin
     FClientUnit.UseUnit(FDtoUnit.Name);
   end;
 
-  FMetaTypes.Clear;
-
-  // Build meta information
-  for Definition in Document.Definitions do
-    MetaTypeFromSchema(Definition.Value, Definition.Key, TListType.ltAuto);
-
-  for Path in Document.Paths do
-    ProcessPathItem(Path.Key, Path.Value);
-
   // Generate code from meta information
-  for MetaType in FMetaTypes do
+  for MetaType in FMetaClient.MetaTypes do
   begin
     // Create specific types. Maybe move such code to the meta type itself.
     if MetaType is TObjectMetaType then
@@ -233,8 +238,14 @@ begin
   GenerateRestService;
 
   // Generate services
-  for Service in FServices do
+  for Service in FMetaClient.Services do
     GenerateService(Service);
+
+  // Generate config
+  GenerateConfig;
+
+  // Generate client
+  GenerateClient;
 end;
 
 function TOpenApiImporter.BuildMetaMethod(Method: TMetaMethod; const Path: string; Operation: TOperation;
@@ -538,8 +549,7 @@ begin
   inherited Create;
   FOptions := TBuilderOptions.Create;
   FLogger := TLogManager.Instance.GetLogger(Self);
-  FMetaTypes := TList<IMetaType>.Create;
-  FServices := TObjectList<TMetaService>.Create;
+  FMetaClient := TMetaClient.Create;
 end;
 
 procedure TOpenApiImporter.GenerateArrayDeserialization(ArrType: TArrayMetaType);
@@ -664,6 +674,53 @@ begin
   end;
 
 //  DoTypeCreated(CodeType);
+end;
+
+procedure TOpenApiImporter.GenerateClient;
+var
+  CodeType: TCodeTypeDeclaration;
+  Service: TMetaService;
+begin
+  // Generate client interface
+  CodeType := TCodeTypeDeclaration.Create;
+  FClientUnit._Types.Add(CodeType);
+  CodeType.Name := FMetaClient.InterfaceName;
+  CodeType.IsInterface := True;
+  CodeType.BaseType := TCodeTypeReference.Create('IRestClient');
+  for Service in FMetaClient.Services do
+    CodeType.AddFunction(Service.ServiceName, Service.InterfaceName, mvPublic);
+
+  // Generate client class
+  CodeType := TCodeTypeDeclaration.Create;
+  FClientUnit._Types.Add(CodeType);
+  CodeType.Name := FMetaClient.ClientClass;
+  CodeType.IsClass := True;
+  CodeType.BaseType := TCodeTypeReference.Create('TCustomRestClient');
+  CodeType.InterfaceTypes.Add(TCodeTypeReference.Create(FMetaClient.InterfaceName));
+
+  for Service in FMetaClient.Services do
+    CodeType.AddFunction(Service.ServiceName, Service.InterfaceName, mvPublic)
+      .AddSnippetFmt('Result := %s.Create(Config)', [Service.ServiceClass]);
+
+  CodeType.AddConstructor
+    .AddSnippetFmt('inherited Create(%s.Create)', [FMetaClient.ConfigClass]);
+end;
+
+procedure TOpenApiImporter.GenerateConfig;
+var
+  CodeType: TCodeTypeDeclaration;
+  Method: TCodeMemberMethod;
+begin
+  // Generate config implementation
+  CodeType := TCodeTypeDeclaration.Create;
+  FClientUnit._Types.Add(CodeType);
+  CodeType.Name := FMetaClient.ConfigClass;
+  CodeType.IsClass := True;
+  CodeType.BaseType := TCodeTypeReference.Create('TCustomRestConfig');
+
+  Method := CodeType.AddConstructor;
+  Method.AddSnippet('inherited Create');
+  Method.AddSnippetFmt('BaseUrl := ''%s''', [FMetaClient.BaseUrl]);
 end;
 
 function TOpenApiImporter.GenerateDTOClass(ObjType: TObjectMetaType): TCodeTypeDeclaration;
@@ -1175,12 +1232,12 @@ begin
   else
     raise EOpenApiImportException.CreateFmt('Unsupported schema type: %s', [Schema.ClassName]);
 
-  if Result is TObjectMetaType and (FindMetaType(Result.TypeName) = nil) then
-    FMetaTypes.Add(Result);
-  if Result is TArrayMetaType and (FindMetaType(Result.TypeName) = nil) then
-    FMetaTypes.Add(Result);
-  if Result is TListMetaType and (FindMetaType(Result.TypeName) = nil) then
-    FMetaTypes.Add(Result);
+  if Result is TObjectMetaType and (FMetaClient.FindMetaType(Result.TypeName) = nil) then
+    FMetaClient.MetaTypes.Add(Result);
+  if Result is TArrayMetaType and (FMetaClient.FindMetaType(Result.TypeName) = nil) then
+    FMetaClient.MetaTypes.Add(Result);
+  if Result is TListMetaType and (FMetaClient.FindMetaType(Result.TypeName) = nil) then
+    FMetaClient.MetaTypes.Add(Result);
 end;
 
 function TOpenApiImporter.MetaTypeFromString(const Format: string): IMetaType;
@@ -1199,9 +1256,8 @@ end;
 
 destructor TOpenApiImporter.Destroy;
 begin
-  Options.Free;
-  FServices.Free;
-  FMetaTypes.Free;
+  FMetaClient.Free;
+  FOptions.Free;
   DestroyCodeUnits;
   inherited;
 end;
@@ -1265,6 +1321,13 @@ begin
   ServiceClassName := ProcessNaming(Original, Options.ServiceOptions.ClassNaming);
   if Assigned(FOnGetServiceClassName) then
     FOnGetServiceClassName(ServiceClassName, Original);
+end;
+
+procedure TOpenApiImporter.DoGetServiceName(var ServiceName: string; const Original: string);
+begin
+  ServiceName := ProcessNaming(Original, Options.ServiceOptions.ServiceNaming);
+  if Assigned(FOnGetServiceName) then
+    FOnGetServiceName(ServiceName, Original);
 end;
 
 function TOpenApiImporter.GenerateServiceInterface(const InterfaceName: string): TCodeTypeDeclaration;
@@ -1354,26 +1417,6 @@ begin
     FOnTypeCreated(CodeType);
 end;
 
-function TOpenApiImporter.FindMetaType(const Name: string): IMetaType;
-var
-  MetaType: IMetaType;
-begin
-  for MetaType in FMetaTypes do
-    if SameText(Name, MetaType.TypeName) then
-      Exit(MetaType);
-  Result := nil;
-end;
-
-function TOpenApiImporter.FindService(const Name: string): TMetaService;
-var
-  Service: TMetaService;
-begin
-  for Service in FServices do
-    if SameText(Name, Service.ServiceName) then
-      Exit(Service);
-  Result := nil;
-end;
-
 function TOpenApiImporter.HttpMethodToAttribute(const Method: string): string;
 begin
   if Method = 'GET' then
@@ -1428,11 +1471,12 @@ begin
   DoSolveServiceOperation(ServiceName, OperationName, Path, PathItem, Operation);
 
   // Find or create the service
-  Service := FindService(ServiceName);
+  Service := FMetaClient.FindService(ServiceName);
+  DoGetServiceName(ServiceName, ServiceName);
   if Service = nil then
   begin
     Service := TMetaService.Create;
-    FServices.Add(Service);
+    FMetaClient.Services.Add(Service);
     Service.ServiceName := ServiceName;
     DoGetInterfaceName(InterfaceName, ServiceName);
     Service.InterfaceName := InterfaceName;
@@ -1468,9 +1512,6 @@ begin
 
   CodeType.AddFunction('Converter', 'TJsonConverter', mvProtected)
     .AddSnippet('Result := TJsonConverter(inherited Converter)');
-
-  CodeType.AddConstructor
-    .AddSnippetFmt('inherited Create(''%s'')', [GetBaseUrl]);
 end;
 
 procedure TOpenApiImporter.ProcessPathItem(const Path: string; PathItem: TPathItem);

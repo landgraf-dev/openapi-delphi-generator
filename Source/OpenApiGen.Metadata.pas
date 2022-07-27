@@ -206,6 +206,28 @@ type
     property Methods: TList<TMetaMethod> read FMethods;
   end;
 
+  TMetaClient = class
+  private
+    FMetaTypes: TList<IMetaType>;
+    FServices: TList<TMetaService>;
+    FInterfaceName: string;
+    FClientClass: string;
+    FConfigClass: string;
+    FBaseUrl: string;
+  public
+    constructor Create;
+    destructor Destroy; override;
+    procedure Clear;
+    function FindMetaType(const Name: string): IMetaType;
+    function FindService(const Name: string): TMetaService;
+    property BaseUrl: string read FBaseUrl write FBaseUrl;
+    property InterfaceName: string read FInterfaceName write FInterfaceName;
+    property ClientClass: string read FClientClass write FClientClass;
+    property ConfigClass: string read FConfigClass write FConfigClass;
+    property MetaTypes: TList<IMetaType> read FMetaTypes;
+    property Services: TList<TMetaService> read FServices;
+  end;
+
 implementation
 
 const
@@ -454,5 +476,48 @@ function TMetaProperty.GetHasValuePropName: string;
 begin
   Result := PropName + 'HasValue';
 end;
+
+{ TMetaClient }
+
+procedure TMetaClient.Clear;
+begin
+  MetaTypes.Clear;
+  Services.Clear;
+end;
+
+constructor TMetaClient.Create;
+begin
+  inherited Create;
+  FMetaTypes := TList<IMetaType>.Create;
+  FServices := TObjectList<TMetaService>.Create;
+end;
+
+destructor TMetaClient.Destroy;
+begin
+  FServices.Free;
+  FMetaTypes.Free;
+  inherited;
+end;
+
+function TMetaClient.FindMetaType(const Name: string): IMetaType;
+var
+  MetaType: IMetaType;
+begin
+  for MetaType in MetaTypes do
+    if SameText(Name, MetaType.TypeName) then
+      Exit(MetaType);
+  Result := nil;
+end;
+
+function TMetaClient.FindService(const Name: string): TMetaService;
+var
+  Service: TMetaService;
+begin
+  for Service in Services do
+    if SameText(Name, Service.ServiceName) then
+      Exit(Service);
+  Result := nil;
+end;
+
 
 end.

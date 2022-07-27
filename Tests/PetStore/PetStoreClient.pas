@@ -13,17 +13,17 @@ type
   TPetService = class;
   TStoreService = class;
   TUserService = class;
+  TPetStoreConfig = class;
+  TPetStoreClient = class;
   
   TRestService = class(TCustomRestService)
   protected
     function CreateConverter: TJsonConverter;
     function Converter: TJsonConverter;
-  public
-    constructor Create;
   end;
   
   IPetService = interface(IInvokable)
-    ['{068D6C7E-07CF-438B-9306-42E6B86536B6}']
+    ['{11CC0920-EBDB-4056-85E8-408BEB459174}']
     function UploadFile(PetId: Int64; AdditionalMetadata: string; &File: TBytes): TApiResponse;
     procedure UpdatePet(Body: TPet);
     procedure AddPet(Body: TPet);
@@ -47,7 +47,7 @@ type
   end;
   
   IStoreService = interface(IInvokable)
-    ['{55DDD78A-6C80-4FE5-A1C3-BECDC07F6053}']
+    ['{0D5D46A0-C723-4BB7-94B3-985BDAD90BD2}']
     function PlaceOrder(Body: TOrder): TOrder;
     function GetOrderById(OrderId: Int64): TOrder;
     procedure DeleteOrder(OrderId: Int64);
@@ -63,7 +63,7 @@ type
   end;
   
   IUserService = interface(IInvokable)
-    ['{B0343463-453E-405F-B1B7-33FFD33C7415}']
+    ['{D03FD142-B424-48B5-8A37-EF8F0806B652}']
     procedure CreateUsersWithArrayInput(Body: TUserList);
     procedure CreateUsersWithListInput(Body: TUserList);
     function GetUserByName(Username: string): TUser;
@@ -86,6 +86,25 @@ type
     procedure CreateUser(Body: TUser);
   end;
   
+  TPetStoreConfig = class(TCustomRestConfig)
+  public
+    constructor Create;
+  end;
+  
+  IPetStoreClient = interface(IRestClient)
+    function Pet: IPetService;
+    function Store: IStoreService;
+    function User: IUserService;
+  end;
+  
+  TPetStoreClient = class(TCustomRestClient, IPetStoreClient)
+  public
+    function Pet: IPetService;
+    function Store: IStoreService;
+    function User: IUserService;
+    constructor Create;
+  end;
+  
 implementation
 
 { TRestService }
@@ -98,11 +117,6 @@ end;
 function TRestService.Converter: TJsonConverter;
 begin
   Result := TJsonConverter(inherited Converter);
-end;
-
-constructor TRestService.Create;
-begin
-  inherited Create('https://petstore.swagger.io/v2');
 end;
 
 { TPetService }
@@ -363,6 +377,36 @@ begin
   Request.AddHeader('Content-Type', 'application/json');
   Response := Request.Execute;
   CheckError(Response);
+end;
+
+{ TPetStoreConfig }
+
+constructor TPetStoreConfig.Create;
+begin
+  inherited Create;
+  BaseUrl := 'https://petstore.swagger.io/v2';
+end;
+
+{ TPetStoreClient }
+
+function TPetStoreClient.Pet: IPetService;
+begin
+  Result := TPetService.Create(Config);
+end;
+
+function TPetStoreClient.Store: IStoreService;
+begin
+  Result := TStoreService.Create(Config);
+end;
+
+function TPetStoreClient.User: IUserService;
+begin
+  Result := TUserService.Create(Config);
+end;
+
+constructor TPetStoreClient.Create;
+begin
+  inherited Create(TPetStoreConfig.Create);
 end;
 
 end.

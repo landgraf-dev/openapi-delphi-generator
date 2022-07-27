@@ -23,9 +23,9 @@ const
 var
   Pet: TPet;
   Tag: TTag;
-  Service: IPetService;
+  Client: IPetStoreClient;
 begin
-  Service := TPetService.Create;
+  Client := TPetStoreClient.Create;
 
   // Create the pet
   Pet := TPet.Create;
@@ -45,13 +45,13 @@ begin
     Pet.Tags.Add(Tag);
 
     Pet.PhotoUrls.Add('http://dummy.com/dog.png');
-    Service.AddPet(Pet);
+    Client.Pet.AddPet(Pet);
   finally
     Pet.Free;
   end;
 
   // Now pet should exist
-  Pet := Service.GetPetById(PetId);
+  Pet := Client.Pet.GetPetById(PetId);
   try
     Check(Pet <> nil, Format('Pet %d not found', [PetId]));
     CheckEquals(PetId, Pet.Id);
@@ -74,11 +74,11 @@ begin
   end;
 
   // Delete the newly created pet
-  Service.DeletePet('special-key', PetId);
+  Client.Pet.DeletePet('special-key', PetId);
 
   // Make sure pet does not exist anymore
   try
-    Pet := Service.GetPetById(PetId);
+    Pet := Client.Pet.GetPetById(PetId);
     Pet.Free;
     Check(False, 'Exception not raised');
   except

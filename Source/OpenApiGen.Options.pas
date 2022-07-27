@@ -44,6 +44,7 @@ type
   TServiceOptions = class
   private
     FMethodNaming: TNamingOptions;
+    FServiceNaming: TNamingOptions;
     FInterfaceNaming: TNamingOptions;
     FSolvingMode: TServiceSolvingMode;
     FClassNaming: TNamingOptions;
@@ -51,6 +52,7 @@ type
   public
     constructor Create;
     destructor Destroy; override;
+    property ServiceNaming: TNamingOptions read FServiceNaming;
     property InterfaceNaming: TNamingOptions read FInterfaceNaming;
     property ClassNaming: TNamingOptions read FClassNaming;
     property MethodNaming: TNamingOptions read FMethodNaming;
@@ -118,6 +120,7 @@ begin
   inherited Create;
   FMethodNaming := TNamingOptions.Create;
   FInterfaceNaming := TNamingOptions.Create;
+  FServiceNaming := TNamingOptions.Create;
   FClassNaming := TNamingOptions.Create;
   FParamNaming := TNamingOptions.Create;
 
@@ -131,12 +134,15 @@ begin
   ClassNaming.PascalCase := True;
 
   ParamNaming.PascalCase := True;
+
+  ServiceNaming.PascalCase := True;
 end;
 
 destructor TServiceOptions.Destroy;
 begin
   FMethodNaming.Free;
   FInterfaceNaming.Free;
+  FServiceNaming.Free;
   FClassNaming.Free;
   FParamNaming.Free;
   inherited;
