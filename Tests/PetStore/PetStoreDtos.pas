@@ -101,6 +101,9 @@ type
     property Name: string read FName write FName;
     property PhotoUrls: stringList read FPhotoUrls write SetPhotoUrls;
     property Tags: TTagList read FTags write SetTags;
+    /// <summary>
+    /// pet status in the store
+    /// </summary>
     property Status: string read FStatus write SetStatus;
     property StatusHasValue: Boolean read FStatusHasValue write FStatusHasValue;
   end;
@@ -134,6 +137,9 @@ type
     property QuantityHasValue: Boolean read FQuantityHasValue write FQuantityHasValue;
     property ShipDate: TDateTime read FShipDate write SetShipDate;
     property ShipDateHasValue: Boolean read FShipDateHasValue write FShipDateHasValue;
+    /// <summary>
+    /// Order Status
+    /// </summary>
     property Status: string read FStatus write SetStatus;
     property StatusHasValue: Boolean read FStatusHasValue write FStatusHasValue;
     property Complete: Boolean read FComplete write SetComplete;
@@ -181,6 +187,9 @@ type
     property PasswordHasValue: Boolean read FPasswordHasValue write FPasswordHasValue;
     property Phone: string read FPhone write SetPhone;
     property PhoneHasValue: Boolean read FPhoneHasValue write FPhoneHasValue;
+    /// <summary>
+    /// User Status
+    /// </summary>
     property UserStatus: Integer read FUserStatus write SetUserStatus;
     property UserStatusHasValue: Boolean read FUserStatusHasValue write FUserStatusHasValue;
   end;

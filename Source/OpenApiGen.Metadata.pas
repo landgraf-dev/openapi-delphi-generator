@@ -17,6 +17,7 @@ type
     function FromJsonFunctionName: string;
     function FromJsonValueFunctionName: string;
     function IsBinary: Boolean;
+    function Description: string;
   end;
 
   ICountableMetaType = interface
@@ -25,6 +26,8 @@ type
   end;
 
   TMetaType = class(TInterfacedObject, IMetaType)
+  strict private
+    FDescription: string;
   public
     function TypeName: string; virtual; abstract;
     function CodeToParam(const ParamName: string): string; virtual;
@@ -34,6 +37,8 @@ type
     function FromJsonFunctionName: string; virtual;
     function FromJsonValueFunctionName: string; virtual;
     function IsBinary: Boolean; virtual;
+    function Description: string;
+    procedure SetDescription(const Value: string);
   end;
 
   TStringMetaType = class(TMetaType)
@@ -105,6 +110,7 @@ type
     FPropType: IMetaType;
     FRestName: string;
     FRequired: Boolean;
+    FDescription: string;
     function GetHasValueFieldName: string;
     function GetHasValuePropName: string;
     function GetIsNullable: Boolean;
@@ -117,6 +123,7 @@ type
     property HasValueFieldName: string read GetHasValueFieldName;
     property HasValuePropName: string read GetHasValuePropName;
     property IsNullable: Boolean read GetIsNullable;
+    property Description: string read FDescription write FDescription;
   end;
 
   TObjectMetaType = class(TMetaType)
@@ -160,11 +167,13 @@ type
     FCodeName: string;
     FParamType: IMetaType;
     FLocation: TParamLocation;
+    FDescription: string;
   public
     property RestName: string read FRestName write FRestName;
     property CodeName: string read FCodeName write FCodeName;
     property ParamType: IMetaType read FParamType write FParamType;
     property Location: TParamLocation read FLocation write FLocation;
+    property Description: string read FDescription write FDescription;
   end;
 
   TMetaMethod = class
@@ -177,6 +186,8 @@ type
     FIgnore: Boolean;
     FProduces: string;
     FConsumes: string;
+    FRemarks: string;
+    FSummary: string;
   public
     constructor Create;
     destructor Destroy; override;
@@ -188,6 +199,8 @@ type
     property Ignore: Boolean read FIgnore write FIgnore;
     property Consumes: string read FConsumes write FConsumes;
     property Produces: string read FProduces write FProduces;
+    property Summary: string read FSummary write FSummary;
+    property Remarks: string read FRemarks write FRemarks;
   end;
 
   TMetaService = class
@@ -196,6 +209,7 @@ type
     FServiceName: string;
     FServiceClass: string;
     FMethods: TList<TMetaMethod>;
+    FDescription: string;
   public
     constructor Create;
     destructor Destroy; override;
@@ -204,6 +218,7 @@ type
     property InterfaceName: string read FInterfaceName write FInterfaceName;
     property ServiceClass: string read FServiceClass write FServiceClass;
     property Methods: TList<TMetaMethod> read FMethods;
+    property Description: string read FDescription write FDescription;
   end;
 
   TMetaClient = class
@@ -239,6 +254,11 @@ function TMetaType.CodeToParam(const ParamName: string): string;
 begin
 end;
 
+function TMetaType.Description: string;
+begin
+  Result := FDescription;
+end;
+
 function TMetaType.FromJsonFunctionName: string;
 begin
   Result := Format('%sFromJson', [TypeName]);
@@ -257,6 +277,11 @@ end;
 function TMetaType.IsManaged: Boolean;
 begin
   Result := False;
+end;
+
+procedure TMetaType.SetDescription(const Value: string);
+begin
+  FDescription := Value;
 end;
 
 function TMetaType.ToJsonFunctionName: string;

@@ -69,9 +69,10 @@ type
     procedure GenerateListSerialization(ListType: TListMetaType);
     procedure GenerateListDeserialization(ListType: TListMetaType);
     procedure GenerateService(Service: TMetaService);
-    function GenerateServiceInterface(const InterfaceName: string): TCodeTypeDeclaration;
+    function GenerateServiceInterface(MetaService: TMetaService): TCodeTypeDeclaration;
     function GenerateServiceClass(const TypeName, InterfaceName: string): TCodeTypeDeclaration;
     function GenerateJsonConverter: TCodeTypeDeclaration;
+    procedure GenerateXmlComments(Comments: TList<TCodeComment>; const Tag, Value: string);
 
     procedure ProcessPathItem(const Path: string; PathItem: TPathItem);
     procedure ProcessOperation(const Path: string; PathItem: TPathItem;
@@ -104,7 +105,7 @@ type
     procedure DoServiceInterfaceCreated(CodeType: TCodeTypeDeclaration);
     procedure DoServiceClassCreated(CodeType: TCodeTypeDeclaration);
     procedure DoPropCreated(Prop: TCodeMemberProperty; Field: TCodeMemberField; Parent: TCodeTypeDeclaration);
-    procedure DoSolveServiceOperation(var ServiceName, OperationName: string;
+    procedure DoSolveServiceOperation(var ServiceName, ServiceDescription, OperationName: string;
       const Path: string; PathItem: TPathItem; Operation: TOperation);
   public
     constructor Create;
@@ -268,6 +269,9 @@ begin
 
     Method.HttpMethod := HttpMethod;
     Method.UrlPath := Path;
+    Method.Summary := Operation.Summary;
+    Method.Remarks := Operation.Description;
+
     for Param in Operation.Parameters do
     begin
       if Param.InBody then
@@ -278,6 +282,7 @@ begin
 
       MetaParam := TMetaParam.Create;
       Method.Params.Add(MetaParam);
+      MetaParam.Description := Param.Description;
       BuildMetaParam(MetaParam, Param, Method.CodeName);
     end;
 
@@ -359,7 +364,7 @@ var
 begin
   if not Service.HasMethods then Exit;
 
-  ParentIntf := GenerateServiceInterface(Service.InterfaceName);
+  ParentIntf := GenerateServiceInterface(Service);
   if not Options.XDataService then
     ParentClass := GenerateServiceClass(Service.ServiceClass, Service.InterfaceName)
   else
@@ -503,6 +508,9 @@ begin
 
   if MetaMethod.ReturnType <> nil then
     CodeMethod.ReturnType.BaseType := MetaMethod.ReturnType.TypeName;
+
+  GenerateXmlComments(CodeMethod.Comments, 'summary', MetaMethod.Summary);
+  GenerateXmlComments(CodeMethod.Comments, 'remarks', MetaMethod.Remarks);
 end;
 
 function TOpenApiImporter.GetBaseUrl: string;
@@ -680,6 +688,7 @@ procedure TOpenApiImporter.GenerateClient;
 var
   CodeType: TCodeTypeDeclaration;
   Service: TMetaService;
+  CodeMethod: TCodeMemberMethod;
 begin
   // Generate client interface
   CodeType := TCodeTypeDeclaration.Create;
@@ -688,7 +697,10 @@ begin
   CodeType.IsInterface := True;
   CodeType.BaseType := TCodeTypeReference.Create('IRestClient');
   for Service in FMetaClient.Services do
-    CodeType.AddFunction(Service.ServiceName, Service.InterfaceName, mvPublic);
+  begin
+    CodeMethod := CodeType.AddFunction(Service.ServiceName, Service.InterfaceName, mvPublic);
+    GenerateXmlComments(CodeMethod.Comments, 'summary', Service.Description);
+  end;
 
   // Generate client class
   CodeType := TCodeTypeDeclaration.Create;
@@ -699,11 +711,22 @@ begin
   CodeType.InterfaceTypes.Add(TCodeTypeReference.Create(FMetaClient.InterfaceName));
 
   for Service in FMetaClient.Services do
-    CodeType.AddFunction(Service.ServiceName, Service.InterfaceName, mvPublic)
-      .AddSnippetFmt('Result := %s.Create(Config)', [Service.ServiceClass]);
+  begin
+    CodeMethod := CodeType.AddFunction(Service.ServiceName, Service.InterfaceName, mvPublic);
+    CodeMethod.AddSnippetFmt('Result := %s.Create(Config)', [Service.ServiceClass]);
+  end;
 
   CodeType.AddConstructor
     .AddSnippetFmt('inherited Create(%s.Create)', [FMetaClient.ConfigClass]);
+end;
+
+procedure TOpenApiImporter.GenerateXmlComments(Comments: TList<TCodeComment>; const Tag, Value: string);
+begin
+  if Value = '' then Exit;
+
+  Comments.Add(TCodeComment.Create(Format('<%s>', [Tag]), TCommentStyle.csDocumentation));
+  Comments.Add(TCodeComment.Create(Value, TCommentStyle.csDocumentation));
+  Comments.Add(TCodeComment.Create(Format('</%s>', [Tag]), TCommentStyle.csDocumentation));
 end;
 
 procedure TOpenApiImporter.GenerateConfig;
@@ -735,6 +758,7 @@ begin
   FDtoUnit._Types.Add(CodeType);
   CodeType.Name := ObjType.TypeName;
   CodeType.IsClass := True;
+  GenerateXmlComments(CodeType.Comments, 'summary', ObjType.Description);
 
   // Declare fields and properties
   for Prop in ObjType.Props do
@@ -1028,6 +1052,8 @@ begin
     CodeField.AddAttribute('JsonProperty').AddRawArgument(QuotedStr(Prop.RestName));
   end;
 
+  GenerateXmlComments(CodeProp.Comments, 'summary', Prop.Description);
+
   DoPropCreated(CodeProp, CodeField, CodeType);
 end;
 
@@ -1168,6 +1194,7 @@ begin
   DoGetTypeName(TypeName, Name);
   ObjType := TObjectMetaType.Create(TypeName);
   Result := ObjType;
+  ObjType.SetDescription(Schema.Description);
   for SchemaProp in Schema.Properties do
   begin
     MetaProp := TMetaProperty.Create;
@@ -1179,6 +1206,7 @@ begin
     MetaProp.RestName := SchemaProp.Key;
     MetaProp.PropName := PropName;
     MetaProp.FieldName := FieldName;
+    MetaProp.Description := SchemaProp.Value.Description;
     MetaProp.Required := Schema.Required.IndexOf(SchemaProp.Key) >= 0;
     MetaProp.PropType := MetaTypeFromSchema(SchemaProp.Value, Name + PropName, TListType.ltList);
     if Options.XDataService and not MetaProp.Required and not MetaProp.PropType.IsManaged then
@@ -1330,20 +1358,21 @@ begin
     FOnGetServiceName(ServiceName, Original);
 end;
 
-function TOpenApiImporter.GenerateServiceInterface(const InterfaceName: string): TCodeTypeDeclaration;
+function TOpenApiImporter.GenerateServiceInterface(MetaService: TMetaService): TCodeTypeDeclaration;
 var
   Service: TCodeTypeDeclaration;
   RouteAttr: TCodeAttributeDeclaration;
 begin
-  Service := FClientUnit.FindType(InterfaceName);
+  Service := FClientUnit.FindType(MetaService.InterfaceName);
   if Service <> nil then Exit(Service);
 
   Service := TCodeTypeDeclaration.Create;
   FClientUnit._Types.Add(Service);
   Service.IsInterface := True;
   Service.BaseType.BaseType := 'IInvokable';
-  Service.Name := InterfaceName;
+  Service.Name := MetaService.InterfaceName;
   Service.InterfaceGuid := TGUID.NewGuid;
+  GenerateXmlComments(Service.Comments, 'summary', MetaService.Description);
 
   if Options.XDataService then
   begin
@@ -1392,14 +1421,22 @@ begin
     FOnPropCreated(Prop, Field, Parent);
 end;
 
-procedure TOpenApiImporter.DoSolveServiceOperation(var ServiceName, OperationName: string; const Path: string;
+procedure TOpenApiImporter.DoSolveServiceOperation(var ServiceName, ServiceDescription, OperationName: string; const Path: string;
   PathItem: TPathItem; Operation: TOperation);
+var
+  Tag: TTag;
 begin
+  ServiceDescription := '';
   case Options.ServiceOptions.SolvingMode of
     TServiceSolvingMode.MultipleClientsFromFirstTagAndOperationId:
       begin
         if Operation.Tags.Count > 0 then
-          ServiceName := Operation.Tags[0]
+        begin
+          ServiceName := Operation.Tags[0];
+          Tag := FDocument.Tags.Find(ServiceName);
+          if Tag <> nil then
+            ServiceDescription := Tag.Description;
+        end
         else
           ServiceName := '';
         OperationName := Operation.OperationId;
@@ -1464,11 +1501,12 @@ var
   Service: TMetaService;
   InterfaceName: string;
   ServiceClassName: string;
+  ServiceDescription: string;
 begin
   if Operation = nil then Exit;
 
   // Service Mode
-  DoSolveServiceOperation(ServiceName, OperationName, Path, PathItem, Operation);
+  DoSolveServiceOperation(ServiceName, ServiceDescription, OperationName, Path, PathItem, Operation);
 
   // Find or create the service
   Service := FMetaClient.FindService(ServiceName);
@@ -1478,6 +1516,7 @@ begin
     Service := TMetaService.Create;
     FMetaClient.Services.Add(Service);
     Service.ServiceName := ServiceName;
+    Service.Description := ServiceDescription;
     DoGetInterfaceName(InterfaceName, ServiceName);
     Service.InterfaceName := InterfaceName;
     DoGetServiceClassName(ServiceClassName, ServiceName);
@@ -1495,6 +1534,13 @@ end;
 function TOpenApiImporter.GenerateMethodParam(CodeMethod: TCodeMemberMethod; MetaParam: TMetaParam): TCodeParameterDeclaration;
 begin
   Result := CodeMethod.AddParameter(MetaParam.CodeName, MetaParam.ParamType.TypeName);
+
+  if MetaParam.Description <> '' then
+  begin
+    CodeMethod.Comments.Add(TCodeComment.Create(Format('<param name="%s">', [MetaParam.CodeName]), TCommentStyle.csDocumentation));
+    CodeMethod.Comments.Add(TCodeComment.Create(MetaParam.Description, TCommentStyle.csDocumentation));
+    CodeMethod.Comments.Add(TCodeComment.Create('</param>', TCommentStyle.csDocumentation));
+  end;
 end;
 
 procedure TOpenApiImporter.GenerateRestService;

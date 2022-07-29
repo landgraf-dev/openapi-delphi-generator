@@ -22,67 +22,307 @@ type
     function Converter: TJsonConverter;
   end;
   
+  /// <summary>
+  /// Everything about your Pets
+  /// </summary>
   IPetService = interface(IInvokable)
-    ['{11CC0920-EBDB-4056-85E8-408BEB459174}']
+    ['{1B571204-1E67-4BF3-A9E9-9C1489E8FF0C}']
+    /// <param name="PetId">
+    /// ID of pet to update
+    /// </param>
+    /// <param name="AdditionalMetadata">
+    /// Additional data to pass to server
+    /// </param>
+    /// <param name="&File">
+    /// file to upload
+    /// </param>
+    /// <summary>
+    /// uploads an image
+    /// </summary>
     function UploadFile(PetId: Int64; AdditionalMetadata: string; &File: TBytes): TApiResponse;
+    /// <param name="Body">
+    /// Pet object that needs to be added to the store
+    /// </param>
+    /// <summary>
+    /// Update an existing pet
+    /// </summary>
     procedure UpdatePet(Body: TPet);
+    /// <summary>
+    /// Add a new pet to the store
+    /// </summary>
+    /// <param name="Body">
+    /// Pet object that needs to be added to the store
+    /// </param>
     procedure AddPet(Body: TPet);
+    /// <param name="Status">
+    /// Status values that need to be considered for filter
+    /// </param>
+    /// <summary>
+    /// Finds Pets by status
+    /// </summary>
+    /// <remarks>
+    /// Multiple status values can be provided with comma separated strings
+    /// </remarks>
     function FindPetsByStatus(Status: stringArray): TPetList;
+    /// <param name="Tags">
+    /// Tags to filter by
+    /// </param>
+    /// <summary>
+    /// Finds Pets by tags
+    /// </summary>
+    /// <remarks>
+    /// Multiple tags can be provided with comma separated strings. Use tag1, tag2, tag3 for testing.
+    /// </remarks>
     function FindPetsByTags(Tags: stringArray): TPetList;
+    /// <param name="PetId">
+    /// ID of pet to return
+    /// </param>
+    /// <summary>
+    /// Find pet by ID
+    /// </summary>
+    /// <remarks>
+    /// Returns a single pet
+    /// </remarks>
     function GetPetById(PetId: Int64): TPet;
+    /// <param name="PetId">
+    /// ID of pet that needs to be updated
+    /// </param>
+    /// <param name="Name">
+    /// Updated name of the pet
+    /// </param>
+    /// <param name="Status">
+    /// Updated status of the pet
+    /// </param>
+    /// <summary>
+    /// Updates a pet in the store with form data
+    /// </summary>
     procedure UpdatePetWithForm(PetId: Int64; Name: string; Status: string);
+    /// <param name="PetId">
+    /// Pet id to delete
+    /// </param>
+    /// <summary>
+    /// Deletes a pet
+    /// </summary>
     procedure DeletePet(ApiKey: string; PetId: Int64);
   end;
   
   TPetService = class(TRestService, IPetService)
   public
+    /// <param name="PetId">
+    /// ID of pet to update
+    /// </param>
+    /// <param name="AdditionalMetadata">
+    /// Additional data to pass to server
+    /// </param>
+    /// <param name="&File">
+    /// file to upload
+    /// </param>
     function UploadFile(PetId: Int64; AdditionalMetadata: string; &File: TBytes): TApiResponse;
+    /// <param name="Body">
+    /// Pet object that needs to be added to the store
+    /// </param>
     procedure UpdatePet(Body: TPet);
+    /// <param name="Body">
+    /// Pet object that needs to be added to the store
+    /// </param>
     procedure AddPet(Body: TPet);
+    /// <param name="Status">
+    /// Status values that need to be considered for filter
+    /// </param>
     function FindPetsByStatus(Status: stringArray): TPetList;
+    /// <param name="Tags">
+    /// Tags to filter by
+    /// </param>
     function FindPetsByTags(Tags: stringArray): TPetList;
+    /// <param name="PetId">
+    /// ID of pet to return
+    /// </param>
     function GetPetById(PetId: Int64): TPet;
+    /// <param name="PetId">
+    /// ID of pet that needs to be updated
+    /// </param>
+    /// <param name="Name">
+    /// Updated name of the pet
+    /// </param>
+    /// <param name="Status">
+    /// Updated status of the pet
+    /// </param>
     procedure UpdatePetWithForm(PetId: Int64; Name: string; Status: string);
+    /// <param name="PetId">
+    /// Pet id to delete
+    /// </param>
     procedure DeletePet(ApiKey: string; PetId: Int64);
   end;
   
+  /// <summary>
+  /// Access to Petstore orders
+  /// </summary>
   IStoreService = interface(IInvokable)
-    ['{0D5D46A0-C723-4BB7-94B3-985BDAD90BD2}']
+    ['{7C716BC0-88A7-431F-9232-5CA18E91B492}']
+    /// <param name="Body">
+    /// order placed for purchasing the pet
+    /// </param>
+    /// <summary>
+    /// Place an order for a pet
+    /// </summary>
     function PlaceOrder(Body: TOrder): TOrder;
+    /// <param name="OrderId">
+    /// ID of pet that needs to be fetched
+    /// </param>
+    /// <summary>
+    /// Find purchase order by ID
+    /// </summary>
+    /// <remarks>
+    /// For valid response try integer IDs with value >= 1 and <= 10. Other values will generated exceptions
+    /// </remarks>
     function GetOrderById(OrderId: Int64): TOrder;
+    /// <param name="OrderId">
+    /// ID of the order that needs to be deleted
+    /// </param>
+    /// <summary>
+    /// Delete purchase order by ID
+    /// </summary>
+    /// <remarks>
+    /// For valid response try integer IDs with positive integer value. Negative or non-integer values will generate API errors
+    /// </remarks>
     procedure DeleteOrder(OrderId: Int64);
+    /// <summary>
+    /// Returns pet inventories by status
+    /// </summary>
+    /// <remarks>
+    /// Returns a map of status codes to quantities
+    /// </remarks>
     function GetInventory: TGetInventoryOutput;
   end;
   
   TStoreService = class(TRestService, IStoreService)
   public
+    /// <param name="Body">
+    /// order placed for purchasing the pet
+    /// </param>
     function PlaceOrder(Body: TOrder): TOrder;
+    /// <param name="OrderId">
+    /// ID of pet that needs to be fetched
+    /// </param>
     function GetOrderById(OrderId: Int64): TOrder;
+    /// <param name="OrderId">
+    /// ID of the order that needs to be deleted
+    /// </param>
     procedure DeleteOrder(OrderId: Int64);
     function GetInventory: TGetInventoryOutput;
   end;
   
+  /// <summary>
+  /// Operations about user
+  /// </summary>
   IUserService = interface(IInvokable)
-    ['{D03FD142-B424-48B5-8A37-EF8F0806B652}']
+    ['{6AF38CCE-1A86-4473-9BC7-CAA13A24F719}']
+    /// <param name="Body">
+    /// List of user object
+    /// </param>
+    /// <summary>
+    /// Creates list of users with given input array
+    /// </summary>
     procedure CreateUsersWithArrayInput(Body: TUserList);
+    /// <param name="Body">
+    /// List of user object
+    /// </param>
+    /// <summary>
+    /// Creates list of users with given input array
+    /// </summary>
     procedure CreateUsersWithListInput(Body: TUserList);
+    /// <param name="Username">
+    /// The name that needs to be fetched. Use user1 for testing. 
+    /// </param>
+    /// <summary>
+    /// Get user by user name
+    /// </summary>
     function GetUserByName(Username: string): TUser;
+    /// <param name="Username">
+    /// name that need to be updated
+    /// </param>
+    /// <param name="Body">
+    /// Updated user object
+    /// </param>
+    /// <summary>
+    /// Updated user
+    /// </summary>
+    /// <remarks>
+    /// This can only be done by the logged in user.
+    /// </remarks>
     procedure UpdateUser(Username: string; Body: TUser);
+    /// <param name="Username">
+    /// The name that needs to be deleted
+    /// </param>
+    /// <summary>
+    /// Delete user
+    /// </summary>
+    /// <remarks>
+    /// This can only be done by the logged in user.
+    /// </remarks>
     procedure DeleteUser(Username: string);
+    /// <param name="Username">
+    /// The user name for login
+    /// </param>
+    /// <param name="Password">
+    /// The password for login in clear text
+    /// </param>
+    /// <summary>
+    /// Logs user into the system
+    /// </summary>
     function LoginUser(Username: string; Password: string): string;
+    /// <summary>
+    /// Logs out current logged in user session
+    /// </summary>
     procedure LogoutUser;
+    /// <param name="Body">
+    /// Created user object
+    /// </param>
+    /// <summary>
+    /// Create user
+    /// </summary>
+    /// <remarks>
+    /// This can only be done by the logged in user.
+    /// </remarks>
     procedure CreateUser(Body: TUser);
   end;
   
   TUserService = class(TRestService, IUserService)
   public
+    /// <param name="Body">
+    /// List of user object
+    /// </param>
     procedure CreateUsersWithArrayInput(Body: TUserList);
+    /// <param name="Body">
+    /// List of user object
+    /// </param>
     procedure CreateUsersWithListInput(Body: TUserList);
+    /// <param name="Username">
+    /// The name that needs to be fetched. Use user1 for testing. 
+    /// </param>
     function GetUserByName(Username: string): TUser;
+    /// <param name="Username">
+    /// name that need to be updated
+    /// </param>
+    /// <param name="Body">
+    /// Updated user object
+    /// </param>
     procedure UpdateUser(Username: string; Body: TUser);
+    /// <param name="Username">
+    /// The name that needs to be deleted
+    /// </param>
     procedure DeleteUser(Username: string);
+    /// <param name="Username">
+    /// The user name for login
+    /// </param>
+    /// <param name="Password">
+    /// The password for login in clear text
+    /// </param>
     function LoginUser(Username: string; Password: string): string;
     procedure LogoutUser;
+    /// <param name="Body">
+    /// Created user object
+    /// </param>
     procedure CreateUser(Body: TUser);
   end;
   
@@ -92,8 +332,17 @@ type
   end;
   
   IPetStoreClient = interface(IRestClient)
+    /// <summary>
+    /// Everything about your Pets
+    /// </summary>
     function Pet: IPetService;
+    /// <summary>
+    /// Access to Petstore orders
+    /// </summary>
     function Store: IStoreService;
+    /// <summary>
+    /// Operations about user
+    /// </summary>
     function User: IUserService;
   end;
   
