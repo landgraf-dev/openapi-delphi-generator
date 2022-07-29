@@ -1425,6 +1425,7 @@ procedure TOpenApiImporter.DoSolveServiceOperation(var ServiceName, ServiceDescr
   PathItem: TPathItem; Operation: TOperation);
 var
   Tag: TTag;
+  P: Integer;
 begin
   ServiceDescription := '';
   case Options.ServiceOptions.SolvingMode of
@@ -1440,7 +1441,15 @@ begin
         else
           ServiceName := '';
         OperationName := Operation.OperationId;
-      end
+      end;
+    TServiceSolvingMode.MultipleClientsFromXDataOperationId:
+      begin
+        P := Pos('.', Operation.OperationId);
+        ServiceName := Copy(Operation.OperationId, 1, P - 1);
+        OperationName := Copy(Operation.OperationId, P + 1);
+        if StartsText('I', ServiceName) and EndsText('Service', ServiceName) then
+          ServiceName := Copy(ServiceName, 2, Length(ServiceName) - 8);
+      end;
   else
     // TServiceSolvingMode.SingleClientFromOperationId
     ServiceName := '';
@@ -1509,8 +1518,8 @@ begin
   DoSolveServiceOperation(ServiceName, ServiceDescription, OperationName, Path, PathItem, Operation);
 
   // Find or create the service
-  Service := FMetaClient.FindService(ServiceName);
   DoGetServiceName(ServiceName, ServiceName);
+  Service := FMetaClient.FindService(ServiceName);
   if Service = nil then
   begin
     Service := TMetaService.Create;

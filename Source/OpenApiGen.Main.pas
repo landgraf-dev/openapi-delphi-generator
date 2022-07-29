@@ -65,7 +65,7 @@ var
   FullOutputFolder: string;
 begin
   FullOutputFolder := TPath.GetFullPath(OutputFolder);
-  ForceDirectories(FullOutputFolder);
+//  ForceDirectories(FullOutputFolder);
   Generator := TDelphiCodeGenerator.Create;
   try
     Generator.StructureStatements := True;

@@ -12,7 +12,10 @@ type
     SingleClientFromOperationId,
 
     /// <summary>From the first operation tag and operation ID (method name = operation ID, service name = first operation tag).</summary>
-    MultipleClientsFromFirstTagAndOperationId
+    MultipleClientsFromFirstTagAndOperationId,
+
+    /// <summary>Multiple clients from the Swagger operation ID in the form 'I{service name}Service.{operation}'.</summary>
+    MultipleClientsFromXDataOperationId
   );
 
   TNamingOptions = class
