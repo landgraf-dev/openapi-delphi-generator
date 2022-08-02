@@ -1362,6 +1362,7 @@ function TOpenApiImporter.GenerateServiceInterface(MetaService: TMetaService): T
 var
   Service: TCodeTypeDeclaration;
   RouteAttr: TCodeAttributeDeclaration;
+  GuidStr: string;
 begin
   Service := FClientUnit.FindType(MetaService.InterfaceName);
   if Service <> nil then Exit(Service);
@@ -1372,6 +1373,11 @@ begin
   Service.BaseType.BaseType := 'IInvokable';
   Service.Name := MetaService.InterfaceName;
   Service.InterfaceGuid := TGUID.NewGuid;
+  if Options.ServiceOptions.InterfaceGuids.TryGetValue(MetaService.InterfaceName, GuidStr) then
+    try
+      Service.InterfaceGuid := StringToGuid(GuidStr);
+    except
+    end;
   GenerateXmlComments(Service.Comments, 'summary', MetaService.Description);
 
   if Options.XDataService then
@@ -1484,12 +1490,9 @@ begin
 end;
 
 function TOpenApiImporter.ProcessNaming(const S: string; Options: TNamingOptions): string;
-var
-  Index: Integer;
 begin
-  Index := Options.Mapping.IndexOfName(S);
-  if Index >= 0 then
-    Exit(Options.Mapping.ValueFromIndex[Index]);
+  if Options.Mapping.TryGetValue(S, Result) then
+    Exit;
 
   Result := ToId(S);
   if Options.PascalCase then
@@ -1498,6 +1501,9 @@ begin
     Result := Format(Options.FormatString, [Result]);
   if TDelphiCodeGenerator.IsReservedWord(Result) then
     Result := '&' + Result;
+
+  if Options.Mapping.ContainsKey(Result) then
+    Result := Options.Mapping[Result];
 end;
 
 procedure TOpenApiImporter.ProcessOperation(const Path: string; PathItem: TPathItem;

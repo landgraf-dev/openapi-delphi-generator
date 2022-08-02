@@ -3,7 +3,7 @@ unit OpenApiGen.Options;
 interface
 
 uses
-  System.Classes;
+  System.Classes, Bcl.Collections;
 
 type
   /// <summary>Specifies how the method name and service classes/interfaces are generated.</summary>
@@ -18,17 +18,20 @@ type
     MultipleClientsFromXDataOperationId
   );
 
+  TStringMapping = class(TOrderedDictionary<string, string>)
+  end;
+
   TNamingOptions = class
   private
     FPascalCase: Boolean;
     FFormatString: string;
-    FMapping: TStrings;
+    FMapping: TStringMapping;
   public
     constructor Create;
     destructor Destroy; override;
     property FormatString: string read FFormatString write FFormatString;
     property PascalCase: Boolean read FPascalCase write FPascalCase;
-    property Mapping: TStrings read FMapping;
+    property Mapping: TStringMapping read FMapping;
   end;
 
   TDtoOptions = class
@@ -52,6 +55,7 @@ type
     FSolvingMode: TServiceSolvingMode;
     FClassNaming: TNamingOptions;
     FParamNaming: TNamingOptions;
+    FInterfaceGuids: TStringMapping;
   public
     constructor Create;
     destructor Destroy; override;
@@ -61,6 +65,7 @@ type
     property MethodNaming: TNamingOptions read FMethodNaming;
     property ParamNaming: TNamingOptions read FParamNaming;
     property SolvingMode: TServiceSolvingMode read FSolvingMode write FSolvingMode;
+    property InterfaceGuids: TStringMapping read FInterfaceGuids;
   end;
 
   TGeneratorOptions = class
@@ -121,6 +126,7 @@ end;
 constructor TServiceOptions.Create;
 begin
   inherited Create;
+  FInterfaceGuids := TStringMapping.Create;
   FMethodNaming := TNamingOptions.Create;
   FInterfaceNaming := TNamingOptions.Create;
   FServiceNaming := TNamingOptions.Create;
@@ -143,6 +149,7 @@ end;
 
 destructor TServiceOptions.Destroy;
 begin
+  FInterfaceGuids.Free;
   FMethodNaming.Free;
   FInterfaceNaming.Free;
   FServiceNaming.Free;
@@ -156,7 +163,7 @@ end;
 constructor TNamingOptions.Create;
 begin
   inherited Create;
-  FMapping := TStringList.Create;
+  FMapping := TStringMapping.Create;
 end;
 
 destructor TNamingOptions.Destroy;
