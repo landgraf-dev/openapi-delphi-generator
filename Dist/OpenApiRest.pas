@@ -132,11 +132,9 @@ type
   ITokenData = interface
   ['{C0D7EA65-A432-426F-BBCF-6E3723622266}']
     function GetAccessToken: string;
-    function GetIsExpired: Boolean;
     function GetExpirationTime: TDateTime;
 
     property AccessToken: string read GetAccessToken;
-    property IsExpired: Boolean read GetIsExpired;
     property ExpirationTime: TDateTime read GetExpirationTime;
   end;
 
@@ -150,12 +148,10 @@ type
     FAccessToken: string;
     FExpirationTime: TDateTime;
     function GetAccessToken: string;
-    function GetIsExpired: Boolean;
     function GetExpirationTime: TDateTime;
   public
     constructor Create(const AccessToken: string; ExpiresIn: Integer);
     property AccessToken: string read GetAccessToken;
-    property IsExpired: Boolean read GetIsExpired;
     property ExpirationTime: TDateTime read GetExpirationTime;
   end;
 
@@ -438,11 +434,6 @@ end;
 function TTokenData.GetExpirationTime: TDateTime;
 begin
   Result := FExpirationTime;
-end;
-
-function TTokenData.GetIsExpired: Boolean;
-begin
-  Result := Now > FExpirationTime;
 end;
 
 { TClientCredentialsTokenProvider }
