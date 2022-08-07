@@ -23,6 +23,7 @@ type
     function StatusCode: Integer;
     function ContentAsString: string;
     function ContentAsBytes: TBytes;
+    function GetHeader(const Name: string): string;
   end;
 
   THttpRestRequestFactory = class(TInterfacedObject, IRestRequestFactory)
@@ -104,6 +105,11 @@ begin
   FClient.Free;
   FContent.Free;
   inherited;
+end;
+
+function THttpRestResponse.GetHeader(const Name: string): string;
+begin
+  Result := FResponse.HeaderValue[Name];
 end;
 
 function THttpRestResponse.StatusCode: Integer;

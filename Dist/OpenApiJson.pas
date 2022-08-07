@@ -99,14 +99,14 @@ type
     function TBytesFromJson(Source: string): TBytes; virtual;
   end;
 
-function Json: TJsonWrapper;
+function JsonWrapper: TJsonWrapper;
 
 implementation
 
 var
   _Json: TJsonWrapper;
 
-function Json: TJsonWrapper;
+function JsonWrapper: TJsonWrapper;
 begin
   Result := _Json;
 end;

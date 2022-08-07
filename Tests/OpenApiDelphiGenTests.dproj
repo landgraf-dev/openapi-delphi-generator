@@ -97,6 +97,10 @@
         <DCCReference Include="PetStore\PetStoreDtos.pas"/>
         <DCCReference Include="PetStore\PetStoreJson.pas"/>
         <DCCReference Include="PetStore\PetStoreClient.pas"/>
+        <DCCReference Include="S:\nuvem-fiscal\nuvemfiscal-sdk-delphi\Source\NuvemFiscalJson.pas"/>
+        <DCCReference Include="S:\nuvem-fiscal\nuvemfiscal-sdk-delphi\Source\NuvemFiscalClient.pas"/>
+        <DCCReference Include="S:\nuvem-fiscal\nuvemfiscal-sdk-delphi\Source\NuvemFiscalDtos.pas"/>
+        <DCCReference Include="..\Dist\OpenApiUtils.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

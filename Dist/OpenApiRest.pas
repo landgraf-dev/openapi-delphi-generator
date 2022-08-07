@@ -3,7 +3,7 @@ unit OpenApiRest;
 interface
 
 uses
-  SysUtils, Classes,
+  SysUtils, Classes, DateUtils,
   OpenApiJson;
 
 type
@@ -12,6 +12,7 @@ type
     function StatusCode: Integer;
     function ContentAsString: string;
     function ContentAsBytes: TBytes;
+    function GetHeader(const Name: string): string;
   end;
 
   IRestRequest = interface
@@ -128,14 +129,91 @@ type
     property Config: IRestConfig read GetConfig;
   end;
 
+  ITokenData = interface
+  ['{C0D7EA65-A432-426F-BBCF-6E3723622266}']
+    function GetAccessToken: string;
+    function GetIsExpired: Boolean;
+    function GetExpirationTime: TDateTime;
+
+    property AccessToken: string read GetAccessToken;
+    property IsExpired: Boolean read GetIsExpired;
+    property ExpirationTime: TDateTime read GetExpirationTime;
+  end;
+
+  ITokenProvider = interface
+  ['{0951C910-85BC-4F3E-8835-11EA60F96019}']
+    function RetrieveToken: ITokenData;
+  end;
+
+  TTokenData = class(TInterfacedObject, ITokenData)
+  private
+    FAccessToken: string;
+    FExpirationTime: TDateTime;
+    function GetAccessToken: string;
+    function GetIsExpired: Boolean;
+    function GetExpirationTime: TDateTime;
+  public
+    constructor Create(const AccessToken: string; ExpiresIn: Integer);
+    property AccessToken: string read GetAccessToken;
+    property IsExpired: Boolean read GetIsExpired;
+    property ExpirationTime: TDateTime read GetExpirationTime;
+  end;
+
+  IClientCredencialsTokenProvider = interface(ITokenProvider)
+    function GetClientId: string;
+    function GetClientSecret: string;
+    function GetScope: string;
+    function GetTokenEndpoint: string;
+    procedure SetClientId(const Value: string);
+    procedure SetClientSecret(const Value: string);
+    procedure SetScope(const Value: string);
+    procedure SetTokenEndpoint(const Value: string);
+
+    property TokenEndpoint: string read GetTokenEndpoint write SetTokenEndpoint;
+    property ClientId: string read GetClientId write SetClientId;
+    property ClientSecret: string read GetClientSecret write SetClientSecret;
+    property Scope: string read GetScope write SetScope;
+  end;
+
+  TClientCredentialsTokenProvider = class(TInterfacedObject, IClientCredencialsTokenProvider)
+  private
+    FClientId: string;
+    FClientSecret: string;
+    FTokenEndpoint: string;
+    FScope: string;
+    FJson: TJsonWrapper;
+    FRequestFactory: IRestRequestFactory;
+    function GetClientId: string;
+    function GetClientSecret: string;
+    function GetScope: string;
+    function GetTokenEndpoint: string;
+    procedure SetClientId(const Value: string);
+    procedure SetClientSecret(const Value: string);
+    procedure SetScope(const Value: string);
+    procedure SetTokenEndpoint(const Value: string);
+  protected
+    procedure Init; virtual;
+    property Json: TJsonWrapper read FJson;
+    property RequestFactory: IRestRequestFactory read FRequestFactory;
+  public
+    constructor Create; overload;
+    constructor Create(JsonWrapper: TJsonWrapper; RequestFactory: IRestRequestFactory); overload;
+    function RetrieveToken: ITokenData;
+    property TokenEndpoint: string read GetTokenEndpoint write SetTokenEndpoint;
+    property ClientId: string read GetClientId write SetClientId;
+    property ClientSecret: string read GetClientSecret write SetClientSecret;
+    property Scope: string read GetScope write SetScope;
+  end;
+
 var
   DefaultRequestFactory: IRestRequestFactory;
 
 implementation
 
 uses
-  // refactor this later
-  OpenApiHttp;
+  // refactor this later to allow setting the default request factory based on Pascal language being used
+  OpenApiHttp,
+  OpenApiUtils;
 
 { TRestService }
 
@@ -237,13 +315,7 @@ begin
 
   Query := '';
   for I := 0 to FQueryParams.Count - 1 do
-  begin
-    Name := FQueryParams.Names[I];
-    Value := PercentEncode(FQueryParams.ValueFromIndex[I]);
-    if Query <> '' then
-      Query := Query + '&';
-    Query := Query + Name + '=' + Value;
-  end;
+    OpenApiUtils.AppendQueryParam(Query, FQueryParams.Names[I], FQueryParams.ValueFromIndex[I]);
 
   if Query <> '' then
     Result := Result + '?' + Query;
@@ -267,8 +339,7 @@ end;
 
 function TRestRequest.PercentEncode(const Value: string): string;
 begin
-  {$MESSAGE WARN 'Implement'}
-  Result := Value;
+  Result := OpenApiUtils.PercentEncode(Value);
 end;
 
 procedure TRestRequest.SetMethod(const Method: string);
@@ -345,6 +416,156 @@ end;
 function TCustomRestClient.GetConfig: IRestConfig;
 begin
   Result := FConfig;
+end;
+
+{ TTokenData }
+
+constructor TTokenData.Create(const AccessToken: string; ExpiresIn: Integer);
+begin
+  inherited Create;
+  FAccessToken := AccessToken;
+  if ExpiresIn > 0 then
+    FExpirationTime := IncSecond(Now, ExpiresIn)
+  else
+    FExpirationTime := MaxDateTime;
+end;
+
+function TTokenData.GetAccessToken: string;
+begin
+  Result := FAccessToken;
+end;
+
+function TTokenData.GetExpirationTime: TDateTime;
+begin
+  Result := FExpirationTime;
+end;
+
+function TTokenData.GetIsExpired: Boolean;
+begin
+  Result := Now > FExpirationTime;
+end;
+
+{ TClientCredentialsTokenProvider }
+
+constructor TClientCredentialsTokenProvider.Create;
+begin
+  inherited Create;
+  FJson := JsonWrapper;
+  FRequestFactory := DefaultRequestFactory;
+end;
+
+constructor TClientCredentialsTokenProvider.Create(JsonWrapper: TJsonWrapper; RequestFactory: IRestRequestFactory);
+begin
+  inherited Create;
+  FJson := JsonWrapper;
+  FRequestFactory := RequestFactory;
+  Init;
+end;
+
+function TClientCredentialsTokenProvider.GetClientId: string;
+begin
+  Result := FClientId;
+end;
+
+function TClientCredentialsTokenProvider.GetClientSecret: string;
+begin
+  Result := FClientSecret;
+end;
+
+function TClientCredentialsTokenProvider.GetScope: string;
+begin
+  Result := FScope;
+end;
+
+function TClientCredentialsTokenProvider.GetTokenEndpoint: string;
+begin
+  Result := FTokenEndpoint;
+end;
+
+procedure TClientCredentialsTokenProvider.Init;
+begin
+end;
+
+function TClientCredentialsTokenProvider.RetrieveToken: ITokenData;
+var
+  Request: IRestRequest;
+  Response: IRestResponse;
+  JObj: TJSONValue;
+  JProp: TJSONValue;
+  JErrorDescription: TJsonValue;
+  ErrorDescription: string;
+  AccessToken: string;
+  ExpiresIn: Integer;
+  Params: string;
+begin
+  Request := RequestFactory.CreateRequest;
+  Request.SetUrl(TokenEndpoint);
+  Request.SetMethod('POST');
+
+  Request.AddHeader('Content-Type', 'application/x-www-form-urlencoded');
+
+  Params := '';
+  OpenApiUtils.AppendQueryParam(Params, 'grant_type', 'client_credentials');
+  OpenApiUtils.AppendQueryParam(Params, 'client_id', ClientId);
+  OpenApiUtils.AppendQueryParam(Params, 'client_secret', ClientSecret);
+  if Scope <> '' then
+    OpenApiUtils.AppendQueryParam(Params, 'scope', Scope);
+  Request.AddBody(Params);
+
+//  Request.AddHeader('Authorization', Basic);
+
+  Response := Request.Execute;
+  if (Response.StatusCode < 200) or (Response.StatusCode >= 300) then
+    raise EOpenApiClientException.Create('Token request failed with status code ' + IntToStr(Response.StatusCode), Response);
+  if not SameText(Response.GetHeader('Content-Type'), 'application/json') then
+    raise EOpenApiClientException.Create('Token requested failed: unexpected response content type', Response);
+
+  Result := nil;
+  JObj := Json.JsonToJsonValue(Response.ContentAsString);
+  try
+    if Json.IsObject(JObj) then
+    begin
+      if Json.ObjContains(JObj, 'error', JProp) then
+      begin
+        if Json.ObjContains(JObj, 'error_description', JErrorDescription) then
+          ErrorDescription := Json.StringFromJsonValue(JErrorDescription);
+        if ErrorDescription <> '' then
+          ErrorDescription := ' - ' + ErrorDescription;
+        raise EOpenApiClientException.Create(Format('Token request failed: %s%s',
+          [Json.StringFromJsonValue(JProp), ErrorDescription]), Response);
+      end;
+
+      if Json.ObjContains(JObj, 'access_token', JProp) then
+        AccessToken := Json.StringFromJsonValue(JProp);
+      if Json.ObjContains(JObj, 'expires_in', JProp) then
+        ExpiresIn := Json.IntegerFromJsonValue(JProp)
+      else
+        ExpiresIn := 0;
+      Result := TTokenData.Create(AccessToken, ExpiresIn);
+    end;
+  finally
+    JObj.Free;
+  end;
+end;
+
+procedure TClientCredentialsTokenProvider.SetClientId(const Value: string);
+begin
+  FClientId := Value;
+end;
+
+procedure TClientCredentialsTokenProvider.SetClientSecret(const Value: string);
+begin
+  FClientSecret := Value;
+end;
+
+procedure TClientCredentialsTokenProvider.SetScope(const Value: string);
+begin
+  FScope := Value;
+end;
+
+procedure TClientCredentialsTokenProvider.SetTokenEndpoint(const Value: string);
+begin
+  FTokenEndpoint := Value;
 end;
 
 initialization

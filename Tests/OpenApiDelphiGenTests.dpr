@@ -22,7 +22,11 @@ uses
   OpenApiHttp in '..\Dist\OpenApiHttp.pas',
   PetStoreDtos in 'PetStore\PetStoreDtos.pas',
   PetStoreJson in 'PetStore\PetStoreJson.pas',
-  PetStoreClient in 'PetStore\PetStoreClient.pas';
+  PetStoreClient in 'PetStore\PetStoreClient.pas',
+  NuvemFiscalJson in 'S:\nuvem-fiscal\nuvemfiscal-sdk-delphi\Source\NuvemFiscalJson.pas',
+  NuvemFiscalClient in 'S:\nuvem-fiscal\nuvemfiscal-sdk-delphi\Source\NuvemFiscalClient.pas',
+  NuvemFiscalDtos in 'S:\nuvem-fiscal\nuvemfiscal-sdk-delphi\Source\NuvemFiscalDtos.pas',
+  OpenApiUtils in '..\Dist\OpenApiUtils.pas';
 
 {$R *.RES}
 
