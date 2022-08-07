@@ -103,6 +103,9 @@ function JsonWrapper: TJsonWrapper;
 
 implementation
 
+uses
+  OpenApiUtils;
+
 var
   _Json: TJsonWrapper;
 
@@ -360,7 +363,7 @@ end;
 
 function TCustomJsonConverter.TBytesFromJsonValue(Value: TJSONValue): TBytes;
 begin
-  {$MESSAGE WARN 'Implement'}
+  Result := OpenApiUtils.DecodeBase64(StringFromJsonValue(Value));
 end;
 
 function TCustomJsonConverter.TBytesToJson(const Source: TBytes): string;
@@ -377,7 +380,7 @@ end;
 
 function TCustomJsonConverter.TBytesToJsonValue(const Value: TBytes): TJSONValue;
 begin
-  {$MESSAGE WARN 'Implement'}
+  Result := StringToJsonValue(OpenApiUtils.EncodeBase64(Value));
 end;
 
 function TCustomJsonConverter.TDateFromJson(Source: string): TDate;
@@ -394,7 +397,7 @@ end;
 
 function TCustomJsonConverter.TDateFromJsonValue(Value: TJSONValue): TDate;
 begin
-  {$MESSAGE WARN 'Implement'}
+  Result := OpenApiUtils.ISOToDate(StringFromJsonValue(Value));
 end;
 
 function TCustomJsonConverter.TDateTimeFromJson(Source: string): TDateTime;
@@ -411,7 +414,7 @@ end;
 
 function TCustomJsonConverter.TDateTimeFromJsonValue(Value: TJSONValue): TDateTime;
 begin
-  {$MESSAGE WARN 'Implement'}
+  Result := OpenApiUtils.ISOToDateTime(StringFromJsonValue(Value));
 end;
 
 function TCustomJsonConverter.TDateTimeToJson(const Source: TDateTime): string;
@@ -428,7 +431,7 @@ end;
 
 function TCustomJsonConverter.TDateTimeToJsonValue(const Value: TDateTime): TJSONValue;
 begin
-  {$MESSAGE WARN 'Implement'}
+  Result := StringToJsonValue(OpenApiUtils.DateTimeToISO(Value));
 end;
 
 function TCustomJsonConverter.TDateToJson(const Source: TDate): string;
@@ -445,7 +448,7 @@ end;
 
 function TCustomJsonConverter.TDateToJsonValue(const Value: TDate): TJSONValue;
 begin
-  {$MESSAGE WARN 'Implement'}
+  Result := StringToJsonValue(OpenApiUtils.DateToISO(Value));
 end;
 
 function TCustomJsonConverter.Int64FromJson(Source: string): Int64;

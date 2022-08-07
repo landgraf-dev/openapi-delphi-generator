@@ -1543,6 +1543,8 @@ begin
   MetaMethod := TMetaMethod.Create;
   Service.Methods.Add(MetaMethod);
   MetaMethod.CodeName := MethodName;
+  if MetaMethod.CodeName = '' then
+    MetaMethod.Ignore := True;
   BuildMetaMethod(MetaMethod, Path, Operation, HttpMethod);
 end;
 
