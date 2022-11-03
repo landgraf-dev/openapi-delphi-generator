@@ -27,6 +27,9 @@ type
   /// </summary>
   IPetService = interface(IInvokable)
     ['{1B571204-1E67-4BF3-A9E9-9C1489E8FF0C}']
+    /// <summary>
+    /// uploads an image
+    /// </summary>
     /// <param name="PetId">
     /// ID of pet to update
     /// </param>
@@ -36,16 +39,13 @@ type
     /// <param name="&File">
     /// file to upload
     /// </param>
-    /// <summary>
-    /// uploads an image
-    /// </summary>
     function UploadFile(PetId: Int64; AdditionalMetadata: string; &File: TBytes): TApiResponse;
-    /// <param name="Body">
-    /// Pet object that needs to be added to the store
-    /// </param>
     /// <summary>
     /// Update an existing pet
     /// </summary>
+    /// <param name="Body">
+    /// Pet object that needs to be added to the store
+    /// </param>
     procedure UpdatePet(Body: TPet);
     /// <summary>
     /// Add a new pet to the store
@@ -54,36 +54,39 @@ type
     /// Pet object that needs to be added to the store
     /// </param>
     procedure AddPet(Body: TPet);
-    /// <param name="Status">
-    /// Status values that need to be considered for filter
-    /// </param>
     /// <summary>
     /// Finds Pets by status
     /// </summary>
+    /// <param name="Status">
+    /// Status values that need to be considered for filter
+    /// </param>
     /// <remarks>
     /// Multiple status values can be provided with comma separated strings
     /// </remarks>
     function FindPetsByStatus(Status: stringArray): TPetList;
-    /// <param name="Tags">
-    /// Tags to filter by
-    /// </param>
     /// <summary>
     /// Finds Pets by tags
     /// </summary>
+    /// <param name="Tags">
+    /// Tags to filter by
+    /// </param>
     /// <remarks>
     /// Multiple tags can be provided with comma separated strings. Use tag1, tag2, tag3 for testing.
     /// </remarks>
     function FindPetsByTags(Tags: stringArray): TPetList;
-    /// <param name="PetId">
-    /// ID of pet to return
-    /// </param>
     /// <summary>
     /// Find pet by ID
     /// </summary>
+    /// <param name="PetId">
+    /// ID of pet to return
+    /// </param>
     /// <remarks>
     /// Returns a single pet
     /// </remarks>
     function GetPetById(PetId: Int64): TPet;
+    /// <summary>
+    /// Updates a pet in the store with form data
+    /// </summary>
     /// <param name="PetId">
     /// ID of pet that needs to be updated
     /// </param>
@@ -93,16 +96,13 @@ type
     /// <param name="Status">
     /// Updated status of the pet
     /// </param>
-    /// <summary>
-    /// Updates a pet in the store with form data
-    /// </summary>
     procedure UpdatePetWithForm(PetId: Int64; Name: string; Status: string);
-    /// <param name="PetId">
-    /// Pet id to delete
-    /// </param>
     /// <summary>
     /// Deletes a pet
     /// </summary>
+    /// <param name="PetId">
+    /// Pet id to delete
+    /// </param>
     procedure DeletePet(ApiKey: string; PetId: Int64);
   end;
   
@@ -159,29 +159,29 @@ type
   /// </summary>
   IStoreService = interface(IInvokable)
     ['{7C716BC0-88A7-431F-9232-5CA18E91B492}']
-    /// <param name="Body">
-    /// order placed for purchasing the pet
-    /// </param>
     /// <summary>
     /// Place an order for a pet
     /// </summary>
-    function PlaceOrder(Body: TOrder): TOrder;
-    /// <param name="OrderId">
-    /// ID of pet that needs to be fetched
+    /// <param name="Body">
+    /// order placed for purchasing the pet
     /// </param>
+    function PlaceOrder(Body: TOrder): TOrder;
     /// <summary>
     /// Find purchase order by ID
     /// </summary>
+    /// <param name="OrderId">
+    /// ID of pet that needs to be fetched
+    /// </param>
     /// <remarks>
     /// For valid response try integer IDs with value >= 1 and <= 10. Other values will generated exceptions
     /// </remarks>
     function GetOrderById(OrderId: Int64): TOrder;
-    /// <param name="OrderId">
-    /// ID of the order that needs to be deleted
-    /// </param>
     /// <summary>
     /// Delete purchase order by ID
     /// </summary>
+    /// <param name="OrderId">
+    /// ID of the order that needs to be deleted
+    /// </param>
     /// <remarks>
     /// For valid response try integer IDs with positive integer value. Negative or non-integer values will generate API errors
     /// </remarks>
@@ -217,70 +217,70 @@ type
   /// </summary>
   IUserService = interface(IInvokable)
     ['{6AF38CCE-1A86-4473-9BC7-CAA13A24F719}']
-    /// <param name="Body">
-    /// List of user object
-    /// </param>
     /// <summary>
     /// Creates list of users with given input array
     /// </summary>
+    /// <param name="Body">
+    /// List of user object
+    /// </param>
     procedure CreateUsersWithArrayInput(Body: TUserList);
-    /// <param name="Body">
-    /// List of user object
-    /// </param>
     /// <summary>
     /// Creates list of users with given input array
     /// </summary>
-    procedure CreateUsersWithListInput(Body: TUserList);
-    /// <param name="Username">
-    /// The name that needs to be fetched. Use user1 for testing. 
+    /// <param name="Body">
+    /// List of user object
     /// </param>
+    procedure CreateUsersWithListInput(Body: TUserList);
     /// <summary>
     /// Get user by user name
     /// </summary>
+    /// <param name="Username">
+    /// The name that needs to be fetched. Use user1 for testing. 
+    /// </param>
     function GetUserByName(Username: string): TUser;
+    /// <summary>
+    /// Updated user
+    /// </summary>
     /// <param name="Username">
     /// name that need to be updated
     /// </param>
     /// <param name="Body">
     /// Updated user object
     /// </param>
-    /// <summary>
-    /// Updated user
-    /// </summary>
     /// <remarks>
     /// This can only be done by the logged in user.
     /// </remarks>
     procedure UpdateUser(Username: string; Body: TUser);
-    /// <param name="Username">
-    /// The name that needs to be deleted
-    /// </param>
     /// <summary>
     /// Delete user
     /// </summary>
+    /// <param name="Username">
+    /// The name that needs to be deleted
+    /// </param>
     /// <remarks>
     /// This can only be done by the logged in user.
     /// </remarks>
     procedure DeleteUser(Username: string);
+    /// <summary>
+    /// Logs user into the system
+    /// </summary>
     /// <param name="Username">
     /// The user name for login
     /// </param>
     /// <param name="Password">
     /// The password for login in clear text
     /// </param>
-    /// <summary>
-    /// Logs user into the system
-    /// </summary>
     function LoginUser(Username: string; Password: string): string;
     /// <summary>
     /// Logs out current logged in user session
     /// </summary>
     procedure LogoutUser;
-    /// <param name="Body">
-    /// Created user object
-    /// </param>
     /// <summary>
     /// Create user
     /// </summary>
+    /// <param name="Body">
+    /// Created user object
+    /// </param>
     /// <remarks>
     /// This can only be done by the logged in user.
     /// </remarks>

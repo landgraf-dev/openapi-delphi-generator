@@ -53,7 +53,7 @@ begin
   if StartsText('http://', Source) or StartsText('https://', Source) then
     Result := LoadHttpContent(Source)
   else
-    Result := TFile.ReadAllText(Source);
+    Result := TFile.ReadAllText(Source, TEncoding.UTF8);
 end;
 
 procedure GenerateSource(Importer: TOpenApiImporter; const OutputFolder: string);

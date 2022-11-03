@@ -487,6 +487,8 @@ begin
     RouteAttr.AddRawArgument(QuotedStr(MetaMethod.UrlPath));
   end;
 
+  GenerateXmlComments(CodeMethod.Comments, 'summary', MetaMethod.Summary);
+
   for Param in MetaMethod.Params do
   begin
     CodeParam := GenerateMethodParam(CodeMethod, Param);
@@ -509,7 +511,6 @@ begin
   if MetaMethod.ReturnType <> nil then
     CodeMethod.ReturnType.BaseType := MetaMethod.ReturnType.TypeName;
 
-  GenerateXmlComments(CodeMethod.Comments, 'summary', MetaMethod.Summary);
   GenerateXmlComments(CodeMethod.Comments, 'remarks', MetaMethod.Remarks);
 end;
 
