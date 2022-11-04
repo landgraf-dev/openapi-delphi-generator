@@ -109,8 +109,7 @@ type
     procedure DoSolveServiceOperation(var ServiceName, ServiceDescription, OperationName: string;
       const Path: string; PathItem: TPathItem; Operation: TOperation);
   public
-    constructor Create; overload;
-    constructor Create(Options: TBuilderOptions); overload;
+    constructor Create(Options: TBuilderOptions; AOwnsOptions: Boolean = False); reintroduce;
     destructor Destroy; override;
     procedure Build(ADocument: TOpenApiDocument);
     function CodeUnits: TArray<TCodeUnit>;
@@ -555,20 +554,11 @@ begin
   Result[2] := FDtoUnit;
 end;
 
-constructor TOpenApiImporter.Create(Options: TBuilderOptions);
+constructor TOpenApiImporter.Create(Options: TBuilderOptions; AOwnsOptions: Boolean = False);
 begin
   inherited Create;
   FOptions := Options;
-  FOwnsOptions := False;
-  FLogger := TLogManager.Instance.GetLogger(Self);
-  FMetaClient := TMetaClient.Create;
-end;
-
-constructor TOpenApiImporter.Create;
-begin
-  inherited Create;
-  FOptions := TBuilderOptions.Create;
-  FOwnsOptions := True;
+  FOwnsOptions := AOwnsOptions;
   FLogger := TLogManager.Instance.GetLogger(Self);
   FMetaClient := TMetaClient.Create;
 end;

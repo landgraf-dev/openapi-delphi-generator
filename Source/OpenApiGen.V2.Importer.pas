@@ -47,7 +47,7 @@ var
   Document: TOpenApiDocument;
   Importer: TOpenApiImporter;
 begin
-  Importer := TOpenApiImporter.Create;
+  Importer := TOpenApiImporter.Create(Options);
   try
     Document := TOpenApiDeserializer.JsonToDocument(Content);
     try
