@@ -4,7 +4,7 @@ interface
 
 uses
   System.SysUtils, System.StrUtils, System.IOUtils,
-  OpenApi.Document, OpenApi.Json.Serializer, OpenApiGen.Builder, OpenApiGen.Options, OpenApiGen.CommandLine;
+  OpenApi.Document, OpenApiGen.Builder, OpenApiGen.Options, OpenApiGen.CommandLine;
 
 procedure Run;
 
@@ -12,8 +12,7 @@ implementation
 
 uses
   System.Net.HttpClient,
-  Bcl.Code.MetaClasses,
-  Bcl.Code.DelphiGenerator;
+  OpenApiGen.V2.Importer;
 
 function ProductVersion: string;
 var
@@ -56,57 +55,24 @@ begin
     Result := TFile.ReadAllText(Source, TEncoding.UTF8);
 end;
 
-procedure GenerateSource(Importer: TOpenApiImporter; const OutputFolder: string);
-var
-  Generator: TDelphiCodeGenerator;
-  Source: string;
-  FileName: string;
-  CodeUnit: TCodeUnit;
-  FullOutputFolder: string;
-begin
-  FullOutputFolder := TPath.GetFullPath(OutputFolder);
-//  ForceDirectories(FullOutputFolder);
-  Generator := TDelphiCodeGenerator.Create;
-  try
-    Generator.StructureStatements := True;
-    Generator.ReservedWordMode := TReservedWordMode.Ignore;
-    for CodeUnit in Importer.CodeUnits do
-    begin
-      Source := Generator.GenerateCodeFromUnit(CodeUnit);
-      FileName := TPath.ChangeExtension(CodeUnit.Name, '.pas');
-      FileName := TPath.Combine(OutputFolder, FileName);
-      TFile.WriteAllText(FileName, Source);
-    end;
-
-    WriteLn(Format('Files generated succesfully in folder %s.', [FullOutputFolder]));
-  finally
-    Generator.Free;
-  end;
-end;
-
 procedure Run;
 var
   GenOptions: TGeneratorOptions;
-  Document: TOpenApiDocument;
-  Importer: TOpenApiImporter;
+  Options: TBuilderOptions;
+  Content: string;
 begin
   WriteHeader;
   GenOptions := TGeneratorOptions.Create;
   try
-    Importer := TOpenApiImporter.Create;
+    Options := TBuilderOptions.Create;
     try
-      if ParseCommandLine(GenOptions, Importer.Options) then
+      if ParseCommandLine(GenOptions, Options) then
       begin
-        Document := TOpenApiDeserializer.JsonToDocument(LoadContent(GenOptions.InputDocument));
-        try
-          Importer.Build(Document);
-          GenerateSource(Importer, GenOptions.OutputFolder);
-        finally
-          Document.Free;
-        end;
+        Content := LoadContent(GenOptions.InputDocument);
+        GenerateSourceV2(Content, Options, GenOptions);
       end;
     finally
-      Importer.Free;
+      Options.Free;
     end;
   finally
     GenOptions.Free;

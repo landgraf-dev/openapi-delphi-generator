@@ -50,6 +50,7 @@ type
     FOnServiceClassCreated: TTypeCreatedProc;
     FOptions: TBuilderOptions;
     FMetaClient: TMetaClient;
+    FOwnsOptions: Boolean;
     function GetBaseUrl: string;
 
     procedure GenerateClient;
@@ -108,7 +109,8 @@ type
     procedure DoSolveServiceOperation(var ServiceName, ServiceDescription, OperationName: string;
       const Path: string; PathItem: TPathItem; Operation: TOperation);
   public
-    constructor Create;
+    constructor Create; overload;
+    constructor Create(Options: TBuilderOptions); overload;
     destructor Destroy; override;
     procedure Build(ADocument: TOpenApiDocument);
     function CodeUnits: TArray<TCodeUnit>;
@@ -553,10 +555,20 @@ begin
   Result[2] := FDtoUnit;
 end;
 
+constructor TOpenApiImporter.Create(Options: TBuilderOptions);
+begin
+  inherited Create;
+  FOptions := Options;
+  FOwnsOptions := False;
+  FLogger := TLogManager.Instance.GetLogger(Self);
+  FMetaClient := TMetaClient.Create;
+end;
+
 constructor TOpenApiImporter.Create;
 begin
   inherited Create;
   FOptions := TBuilderOptions.Create;
+  FOwnsOptions := True;
   FLogger := TLogManager.Instance.GetLogger(Self);
   FMetaClient := TMetaClient.Create;
 end;
@@ -1286,7 +1298,8 @@ end;
 destructor TOpenApiImporter.Destroy;
 begin
   FMetaClient.Free;
-  FOptions.Free;
+  if FOwnsOptions then
+    FOptions.Free;
   DestroyCodeUnits;
   inherited;
 end;

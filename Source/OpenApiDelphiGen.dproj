@@ -89,7 +89,8 @@
         <VerInfo_Locale>1033</VerInfo_Locale>
         <Manifest_File>(None)</Manifest_File>
         <AppDPIAwarenessMode>none</AppDPIAwarenessMode>
-        <Debugger_RunParams>-i:&quot;https://petstore.swagger.io/v2/swagger.json&quot; -o:&quot;..\..\..\Tests\PetStore&quot; -n:PetStore -m:MultipleClientsFromFirstTagAndOperationId</Debugger_RunParams>
+        <Debugger_RunParams>-i:&quot;https://petstore3.swagger.io/api/v3/openapi.json&quot; -o:&quot;..\Tests\PetStore3&quot; -c:PetStore3ImportConfig.json </Debugger_RunParams>
+        <Debugger_CWD>S:\landgraf\openapi-delphi-generator\Samples</Debugger_CWD>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2)'!=''">
         <DCC_LocalDebugSymbols>false</DCC_LocalDebugSymbols>
@@ -113,6 +114,7 @@
         <DCCReference Include="OpenApiGen.Main.pas"/>
         <DCCReference Include="OpenApiGen.Options.pas"/>
         <DCCReference Include="OpenApiGen.CommandLine.pas"/>
+        <DCCReference Include="OpenApiGen.V2.Importer.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
@@ -157,6 +159,12 @@
                     </Platform>
                 </DeployFile>
                 <DeployFile LocalName="Win32\Debug\OpenApiDelphiGen.exe" Configuration="Debug" Class="ProjectOutput"/>
+                <DeployFile LocalName="Win32\Debug\OpenApiDelphiGen.exe" Configuration="Debug" Class="ProjectOutput">
+                    <Platform Name="Win32">
+                        <RemoteName>OpenApiDelphiGen.exe</RemoteName>
+                        <Overwrite>true</Overwrite>
+                    </Platform>
+                </DeployFile>
                 <DeployClass Name="AdditionalDebugSymbols">
                     <Platform Name="iOSSimulator">
                         <Operation>1</Operation>

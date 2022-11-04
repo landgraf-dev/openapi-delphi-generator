@@ -11,7 +11,8 @@ uses
   OpenApiGen.Builder in 'OpenApiGen.Builder.pas',
   OpenApiGen.Main in 'OpenApiGen.Main.pas',
   OpenApiGen.Options in 'OpenApiGen.Options.pas',
-  OpenApiGen.CommandLine in 'OpenApiGen.CommandLine.pas';
+  OpenApiGen.CommandLine in 'OpenApiGen.CommandLine.pas',
+  OpenApiGen.V2.Importer in 'OpenApiGen.V2.Importer.pas';
 
 begin
 {$IFDEF DEBUG}
