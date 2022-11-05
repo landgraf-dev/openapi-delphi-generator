@@ -1,12 +1,12 @@
-unit OpenApiGen.V2.Importer;
+unit OpenApiGen.V3.Importer;
 
 interface
 
 uses
   System.SysUtils, System.IOUtils,
-  OpenApi.Document, OpenApi.Json.Serializer, OpenApiGen.Builder, OpenApiGen.Options;
+  OpenApi.V3.Document, OpenApi.V3.Json.Serializer, OpenApiGen.Builder, OpenApiGen.Options;
 
-procedure GenerateSourceV2(const Content: string; Options: TBuilderOptions; GenOptions: TGeneratorOptions);
+procedure GenerateSourceV3(const Content: string; Options: TBuilderOptions; GenOptions: TGeneratorOptions);
 
 implementation
 
@@ -41,7 +41,7 @@ begin
   end;
 end;
 
-procedure GenerateSourceV2(const Content: string; Options: TBuilderOptions; GenOptions: TGeneratorOptions);
+procedure GenerateSourceV3(const Content: string; Options: TBuilderOptions; GenOptions: TGeneratorOptions);
 var
   Document: TOpenApiDocument;
   Importer: TOpenApiImporter;
@@ -50,8 +50,8 @@ begin
   try
     Document := TOpenApiDeserializer.JsonToDocument(Content);
     try
-      Importer.Build(Document);
-      GenerateSource(Importer, GenOptions.OutputFolder);
+//      Importer.Build(Document);
+//      GenerateSource(Importer, GenOptions.OutputFolder);
     finally
       Document.Free;
     end;
@@ -61,3 +61,4 @@ begin
 end;
 
 end.
+

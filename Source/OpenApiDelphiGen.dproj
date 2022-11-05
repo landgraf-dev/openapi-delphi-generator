@@ -115,6 +115,7 @@
         <DCCReference Include="OpenApiGen.Options.pas"/>
         <DCCReference Include="OpenApiGen.CommandLine.pas"/>
         <DCCReference Include="OpenApiGen.V2.Importer.pas"/>
+        <DCCReference Include="OpenApiGen.V3.Importer.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

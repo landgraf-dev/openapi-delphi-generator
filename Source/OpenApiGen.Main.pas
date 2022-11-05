@@ -3,7 +3,7 @@ unit OpenApiGen.Main;
 interface
 
 uses
-  System.SysUtils, System.StrUtils, System.IOUtils,
+  System.SysUtils, System.StrUtils, System.Classes, System.IOUtils,
   OpenApi.Document, OpenApiGen.Builder, OpenApiGen.Options, OpenApiGen.CommandLine;
 
 procedure Run;
@@ -11,8 +11,13 @@ procedure Run;
 implementation
 
 uses
+  Bcl.Json.Reader,
   System.Net.HttpClient,
-  OpenApiGen.V2.Importer;
+  OpenApiGen.V2.Importer,
+  OpenApiGen.V3.Importer;
+
+type
+  TOpenApiVersion = (Swagger20, OpenApi30);
 
 function ProductVersion: string;
 var
@@ -55,6 +60,42 @@ begin
     Result := TFile.ReadAllText(Source, TEncoding.UTF8);
 end;
 
+function GetOpenApiVersion(const Content: string): TOpenApiVersion;
+var
+  Stream: TStream;
+  Reader: TJsonReader;
+  Version: string;
+  Prop: string;
+begin
+  try
+    Stream := TStringStream.Create(Content, TEncoding.UTF8, False);
+    try
+      Reader := TJsonReader.Create(Stream);
+      try
+        Reader.ReadBeginObject;
+        Version := '';
+        while Reader.HasNext do
+        begin
+          Prop := Reader.ReadName;
+          if (Prop = 'swagger') and StartsStr('2.0', Reader.ReadString) then
+            Exit(Swagger20);
+          if (Prop = 'openapi') and StartsStr('3.0', Reader.ReadString) then
+            Exit(OpenApi30);
+          Reader.SkipValue;
+        end;
+        raise Exception.Create('Version property not found');
+      finally
+        Reader.Free;
+      end;
+    finally
+      Stream.Free;
+    end;
+  except
+    on E: Exception do
+      raise Exception.CreateFmt('Cannot retrieve OpenApi version - %s (%s)', [E.Message, E.ClassName]);
+  end;
+end;
+
 procedure Run;
 var
   GenOptions: TGeneratorOptions;
@@ -69,7 +110,12 @@ begin
       if ParseCommandLine(GenOptions, Options) then
       begin
         Content := LoadContent(GenOptions.InputDocument);
-        GenerateSourceV2(Content, Options, GenOptions);
+        case GetOpenApiVersion(Content) of
+          Swagger20: GenerateSourceV2(Content, Options, GenOptions);
+          OpenApi30: GenerateSourceV3(Content, Options, GenOptions);
+        else
+          raise Exception.Create('Unsupported OpenAPI version');
+        end;
       end;
     finally
       Options.Free;
