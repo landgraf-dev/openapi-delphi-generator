@@ -210,13 +210,14 @@ begin
   end
   else
   begin
-    FDtoUnit.UseUnit('System.Generics.Collections');
-    FDtoUnit.UseUnit('System.SysUtils'); // Because of TBytes
+    FDtoUnit.UseUnit('Generics.Collections');
+    FDtoUnit.UseUnit('SysUtils'); // Because of TBytes
+    FDtoUnit.Directives.Add(TCodeSnippetDirective.Create('{$IFDEF FPC}{$MODE Delphi}{$ENDIF}'));
 
     FJsonUnit.UseUnit('OpenApiJson');
     FJsonUnit.UseUnit(FDtoUnit.Name);
 
-    FClientUnit.UseUnit('System.SysUtils');
+    FClientUnit.UseUnit('SysUtils');
     FClientUnit.UseUnit('OpenApiRest');
     FClientUnit.UseUnit(FJsonUnit.Name);
     FClientUnit.UseUnit(FDtoUnit.Name);

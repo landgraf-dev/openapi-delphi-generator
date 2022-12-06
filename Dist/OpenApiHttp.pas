@@ -117,4 +117,6 @@ begin
   Result := FResponse.StatusCode;
 end;
 
+initialization
+  DefaultRequestFactory := THttpRestRequestFactory.Create;;
 end.
