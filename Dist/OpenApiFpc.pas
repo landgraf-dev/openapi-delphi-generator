@@ -1,10 +1,11 @@
-unit OpenApiHttp;
+unit OpenApiFpc;
+
+{$IFDEF FPC}{$MODE Delphi}{$ENDIF}
 
 interface
 
 uses
-  System.SysUtils, System.Classes, System.Net.HttpClient, System.Net.URLClient,
-  OpenApiRest;
+  Classes, SysUtils, OpenApiRest, fphttpclient, opensslsockets;
 
 type
   THttpRestRequest = class(TRestRequest)
@@ -14,11 +15,10 @@ type
 
   THttpRestResponse = class(TInterfacedObject, IRestResponse)
   strict private
-    FClient: THttpClient;
-    FResponse: IHttpResponse;
-    FContent: TBytesStream;
+    FClient: TFPHTTPClient;
+    FContent: TStringStream;
   public
-    constructor Create(Response: IHttpResponse; Content: TBytesStream; Client: THttpClient);
+    constructor Create(Client: TFPHttpClient; Content: TStringStream);
     destructor Destroy; override;
     function StatusCode: Integer;
     function ContentAsString: string;
@@ -44,29 +44,25 @@ end;
 
 function THttpRestRequest.Execute: IRestResponse;
 var
-  Request: IHttpRequest;
-  Response: IHttpResponse;
-  Client: THttpClient;
+  Client: TFPHTTPClient;
   SourceStream: TStream;
-  Content: TBytesStream;
+  Content: TStringStream;
   I: Integer;
 begin
-  Client := THttpClient.Create;
+  Client := TFPHTTPClient.Create(nil);
   try
-    Request := Client.GetRequest(Self.Method, BuildUrl);
     if Body <> '' then
       SourceStream := TStringStream.Create(Body, TEncoding.UTF8, False)
     else
       SourceStream := nil;
-    for I := 0 to Headers.Count - 1 do
-      Request.SetHeaderValue(Headers.Names[I], Headers.ValueFromIndex[I]);
-
     try
-      Request.SourceStream := SourceStream;
-      Content := TBytesStream.Create;
+      for I := 0 to Headers.Count - 1 do
+        Client.AddHeader(Headers.Names[I], Headers.ValueFromIndex[I]);
+      Client.RequestBody := SourceStream;
+      Content := TStringStream.Create('', TEncoding.UTF8, False);
       try
-        Response := Client.Execute(Request, Content);
-        Result := THttpRestResponse.Create(Response, Content, Client);
+        Client.HTTPMethod(Self.Method, BuildUrl, Content, []);
+        Result := THttpRestResponse.Create(Client, Content);
         Content := nil;
         Client := nil;
       finally
@@ -89,13 +85,12 @@ end;
 
 function THttpRestResponse.ContentAsString: string;
 begin
-  Result := FResponse.ContentAsString;
+  Result := FContent.DataString;
 end;
 
-constructor THttpRestResponse.Create(Response: IHttpResponse; Content: TBytesStream; Client: THttpClient);
+constructor THttpRestResponse.Create(Client: TFPHTTPClient; Content: TStringStream);
 begin
   inherited Create;
-  FResponse := Response;
   FClient := Client;
   FContent := Content;
 end;
@@ -109,12 +104,12 @@ end;
 
 function THttpRestResponse.GetHeader(const Name: string): string;
 begin
-  Result := FResponse.HeaderValue[Name];
+  Result := Trim(FClient.ResponseHeaders.Values[Name]);
 end;
 
 function THttpRestResponse.StatusCode: Integer;
 begin
-  Result := FResponse.StatusCode;
+  Result := FClient.ResponseStatusCode;
 end;
 
 initialization

@@ -1,12 +1,25 @@
 unit OpenApiJson;
 
+{$IFDEF FPC}{$MODE Delphi}{$ENDIF}
+
 interface
 
 uses
-  SysUtils, System.Generics.Collections, System.JSON;
+{$IFDEF FPC}
+  fpjson,
+{$ELSE}
+  Generics.Collections,
+  JSON,
+{$ENDIF}
+  SysUtils;
 
 type
+{$IFDEF FPC}
+  TJSONValue = fpjson.TJSONData;
+  TJSONBool = fpjson.TJSONBoolean;
+{$ELSE}
   TJSONValue = System.JSON.TJSONValue;
+{$ENDIF}
 
   TJsonWrapper = class
   private
@@ -26,7 +39,7 @@ type
 
     // methods for JSON object manipulation
     procedure ObjAddProp(JObj: TJSONValue; const Name: string; Value: TJSONValue); virtual;
-    function ObjContains(JObj: TJSONValue; const Name: string; var Value: TJSONValue): Boolean; virtual;
+    function ObjContains(JObj: TJSONValue; const Name: string; out Value: TJSONValue): Boolean; virtual;
 
     // methods for JSON array manipulation
     procedure ArrayAdd(JArr: TJSONValue; Value: TJSONValue); virtual;
@@ -118,7 +131,11 @@ end;
 
 procedure TJsonWrapper.ArrayAdd(JArr: TJSONValue; Value: TJSONValue);
 begin
+{$IFDEF FPC}
+  TJSONArray(JArr).Add(Value);
+{$ELSE}
   TJSONArray(JArr).AddElement(Value);
+{$ENDIF}
 end;
 
 function TJsonWrapper.ArrayGet(JArr: TJSONValue; Index: Integer): TJSONValue;
@@ -141,10 +158,17 @@ end;
 
 function TJsonWrapper.BooleanToJsonValue(const Value: Boolean): TJSONValue;
 begin
+{$IFDEF FPC}
+  if Value then
+    Result := TJSONBool.Create(True)
+  else
+    Result := TJSONBool.Create(False);
+{$ELSE}
   if Value then
     Result := TJSONTrue.Create
   else
     Result := TJSONFalse.Create;
+{$ENDIF}
 end;
 
 function TJsonWrapper.CreateArray: TJSONValue;
@@ -166,36 +190,62 @@ function TJsonWrapper.DoubleFromJsonValue(Value: TJSONValue): Double;
 begin
   Result := 0;
   if IsNumber(Value) then
+{$IFDEF FPC}
+    Result := TJSONNumber(Value).AsFloat;
+{$ELSE}
     Result := TJSONNumber(Value).AsDouble;
+{$ENDIF}
 end;
 
 function TJsonWrapper.DoubleToJsonValue(const Value: Double): TJSONValue;
 begin
+{$IFDEF FPC}
+  Result := TJSONFloatNumber.Create(Value);
+{$ELSE}
   Result := TJSONNumber.Create(Value);
+{$ENDIF}
 end;
 
 function TJsonWrapper.Int64FromJsonValue(Value: TJSONValue): Int64;
 begin
   Result := 0;
+{$IFDEF FPC}
+  if IsNumber(Value) then
+    Result := TJSONNumber(Value).AsInt64;
+{$ELSE}
   if IsNumber(Value) and not IsFloatingPoint(TJSONNumber(Value).Value) then
     Result := TJSONNumber(Value).AsInt64;
+{$ENDIF}
 end;
 
 function TJsonWrapper.Int64ToJsonValue(const Value: Int64): TJSONValue;
 begin
+{$IFDEF FPC}
+  Result := TJSONInt64Number.Create(Value);
+{$ELSE}
   Result := TJSONNumber.Create(Value);
+{$ENDIF}
 end;
 
 function TJsonWrapper.IntegerFromJsonValue(Value: TJSONValue): Integer;
 begin
   Result := 0;
+{$IFDEF FPC}
+  if IsNumber(Value) then
+    Result := TJSONNumber(Value).AsInteger;
+{$ELSE}
   if IsNumber(Value) and not IsFloatingPoint(TJSONNumber(Value).Value) then
     Result := TJSONNumber(Value).AsInt;
+{$ENDIF}
 end;
 
 function TJsonWrapper.IntegerToJsonValue(const Value: Integer): TJSONValue;
 begin
+{$IFDEF FPC}
+  Result := TJSONIntegerNumber.Create(Value);
+{$ELSE}
   Result := TJSONNumber.Create(Value);
+{$ENDIF}
 end;
 
 function TJsonWrapper.IsArray(Value: TJSONValue): Boolean;
@@ -241,7 +291,11 @@ end;
 
 function TJsonWrapper.JsonToJsonValue(const Value: string): TJSONValue;
 begin
+{$IFDEF FPC}
+  Result := fpjson.GetJSON(Value);
+{$ELSE}
   Result := TJSONObject.ParseJSONValue(Value);
+{$ENDIF}
 end;
 
 function TJsonWrapper.JsonValueToJson(Value: TJSONValue): string;
@@ -251,12 +305,20 @@ end;
 
 procedure TJsonWrapper.ObjAddProp(JObj: TJSONValue; const Name: string; Value: TJSONValue);
 begin
+{$IFDEF FPC}
+  TJSONObject(JObj).Add(Name, Value);
+{$ELSE}
   TJSONObject(JObj).AddPair(Name, Value);
+{$ENDIF}
 end;
 
-function TJsonWrapper.ObjContains(JObj: TJSONValue; const Name: string; var Value: TJSONValue): Boolean;
+function TJsonWrapper.ObjContains(JObj: TJSONValue; const Name: string; out Value: TJSONValue): Boolean;
 begin
+{$IFDEF FPC}
+  Value := TJSONObject(JObj).Find(Name);
+{$ELSE}
   Value := TJSONObject(JObj).GetValue(Name);
+{$ENDIF}
   Result := Value <> nil;
 end;
 

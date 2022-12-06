@@ -1,8 +1,12 @@
 unit OpenApiUtils;
 
-{$IF CompilerVersion >= 24}
-  {$LEGACYIFEND ON}
-{$IFEND}
+{$IFDEF FPC}{$MODE Delphi}{$ENDIF}
+
+{$IFNDEF FPC}
+  {$IF CompilerVersion >= 24}
+    {$LEGACYIFEND ON}
+  {$IFEND}
+{$ENDIF}
 
 interface
 
@@ -156,9 +160,11 @@ var
   Packet: TPacket;
   Len: integer;
 begin
+  Result := nil;
   SetLength(Result, ((Length(Input) + 2) div 4) * 3);
   StrLen := Length(Input);
   Len := 0;
+  J := 0;
   for I := 1 to (StrLen + 2) div 4 do
   begin
     Packet := DecodePacket((I - 1) * 4 + 1, J);
@@ -182,8 +188,8 @@ var
   L: integer;
   H: string;
 begin
+  Result := '';
   Bytes := TEncoding.UTF8.GetBytes(S);
-
   SetLength(Result, Length(Bytes) * 3); // final string will be maximum 3 times the original bytes
   L := 1;
   for I := 0 to Length(Bytes) - 1 do
@@ -263,16 +269,38 @@ end;
 
 function IsDigit(C: Char): Boolean;
 begin
-{$IF CompilerVersion >= 25}
-  Result := C.IsDigit;
+{$IFDEF FPC}
+  Result := TCharacter.IsDigit(C);
 {$ELSE}
-  Result := Character.IsDigit(C);
-{$IFEND}
+  {$IF CompilerVersion >= 25}
+    Result := C.IsDigit;
+  {$ELSE}
+    Result := Character.IsDigit(C);
+  {$IFEND}
+{$ENDIF}
+end;
+
+function LocalToUTC(const Value: TDateTime): TDateTime;
+begin
+{$IFDEF FPC}
+  Result := LocalTimeToUniversal(Value);
+{$ELSE}
+  Result := TTimeZone.Local.ToUniversalTime(Value);
+{$ENDIF}
+end;
+
+function UTCToLocal(const Value: TDateTime): TDateTime;
+begin
+{$IFDEF FPC}
+  Result := UniversalTimeToLocal(Value);
+{$ELSE}
+  Result := TTimeZone.Local.ToLocalTime(Value);
+{$ENDIF}
 end;
 
 function DateTimeToISO(const Value: TDateTime): string;
 begin
-  Result := InternalDateTimeToISO(TTimeZone.Local.ToUniversalTime(Value), True) + 'Z';
+  Result := InternalDateTimeToISO(LocalToUTC(Value), True) + 'Z';
 end;
 
 function TryISOToDate(const Text: string; out DateTime: TDate): boolean;
@@ -516,13 +544,13 @@ begin
       if TimeZone.HasTimeZone then
         DateTime := AdjustTime(DateTime, TimeZone.HourOff, TimeZone.MinOff)
       else
-        DateTime := TTimeZone.Local.ToUniversalTime(DateTime);
+        DateTime := LocalToUTC(DateTime);
 
     zmAsLocal:
       if TimeZone.HasTimeZone then
       begin
         DateTime := AdjustTime(DateTime, TimeZone.HourOff, TimeZone.MinOff);
-        DateTime := TTimeZone.Local.ToLocalTime(DateTime);
+        DateTime := UTCToLocal(DateTime);
       end;
     end;
   Result := True;

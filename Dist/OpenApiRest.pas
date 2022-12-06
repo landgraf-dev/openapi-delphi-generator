@@ -7,6 +7,8 @@ uses
   OpenApiJson;
 
 type
+  TCustomJsonConverter = OpenApiJson.TCustomJsonConverter;
+
   IRestResponse = interface
   ['{C2CE5CD8-FA9F-442F-9980-988A2A0EFF3D}']
     function StatusCode: Integer;
@@ -49,7 +51,7 @@ type
     constructor Create;
     destructor Destroy; override;
     procedure SetUrl(const Url: string);
-    procedure SetMethod(const Method: string);
+    procedure SetMethod(const HttpMethod: string);
     procedure AddHeader(const Name, Value: string);
     procedure AddQueryParam(const Name, Value: string); virtual;
     procedure AddUrlParam(const Name, Value: string); virtual;
@@ -104,7 +106,7 @@ type
     function SanitizedBaseUrl: string;
   protected
     procedure CheckError(Response: IRestResponse);
-    function CreateConverter: TCustomJsonConverter;
+    function CreateConverter: TCustomJsonConverter; virtual;
     function Converter: TCustomJsonConverter;
   public
     constructor Create(Config: IRestConfig); reintroduce;
@@ -123,6 +125,7 @@ type
   TCustomRestClient = class(TInterfacedObject, IRestClient)
   private
     FConfig: IRestConfig;
+  protected
     function GetConfig: IRestConfig;
   public
     constructor Create(Config: IRestConfig);
@@ -193,7 +196,7 @@ type
     property RequestFactory: IRestRequestFactory read FRequestFactory;
   public
     constructor Create; overload;
-    constructor Create(JsonWrapper: TJsonWrapper; RequestFactory: IRestRequestFactory); overload;
+    constructor Create(JsonWrapper: TJsonWrapper; ReqFactory: IRestRequestFactory); overload;
     function RetrieveToken: ITokenData;
     property TokenEndpoint: string read GetTokenEndpoint write SetTokenEndpoint;
     property ClientId: string read GetClientId write SetClientId;
@@ -208,7 +211,11 @@ implementation
 
 uses
   // refactor this later to allow setting the default request factory based on Pascal language being used
+{$IFDEF FPC}
+  //OpenApiFpc,
+{$ELSE}
   OpenApiHttp,
+{$ENDIF}
   OpenApiUtils;
 
 { TRestService }
@@ -338,9 +345,9 @@ begin
   Result := OpenApiUtils.PercentEncode(Value);
 end;
 
-procedure TRestRequest.SetMethod(const Method: string);
+procedure TRestRequest.SetMethod(const HttpMethod: string);
 begin
-  FMethod := Method;
+  FMethod := HttpMethod;
 end;
 
 procedure TRestRequest.SetUrl(const Url: string);
@@ -445,11 +452,11 @@ begin
   FRequestFactory := DefaultRequestFactory;
 end;
 
-constructor TClientCredentialsTokenProvider.Create(JsonWrapper: TJsonWrapper; RequestFactory: IRestRequestFactory);
+constructor TClientCredentialsTokenProvider.Create(JsonWrapper: TJsonWrapper; ReqFactory: IRestRequestFactory);
 begin
   inherited Create;
   FJson := JsonWrapper;
-  FRequestFactory := RequestFactory;
+  FRequestFactory := ReqFactory;
   Init;
 end;
 
@@ -512,6 +519,8 @@ begin
     raise EOpenApiClientException.Create('Token requested failed: unexpected response content type', Response);
 
   Result := nil;
+  JProp := nil;
+  JErrorDescription := nil;
   JObj := Json.JsonToJsonValue(Response.ContentAsString);
   try
     if Json.IsObject(JObj) then
@@ -559,6 +568,4 @@ begin
   FTokenEndpoint := Value;
 end;
 
-initialization
-  DefaultRequestFactory := THttpRestRequestFactory.Create;;
 end.

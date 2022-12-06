@@ -209,13 +209,14 @@ begin
   end
   else
   begin
-    FDtoUnit.UseUnit('System.Generics.Collections');
-    FDtoUnit.UseUnit('System.SysUtils'); // Because of TBytes
+    FDtoUnit.UseUnit('Generics.Collections');
+    FDtoUnit.UseUnit('SysUtils'); // Because of TBytes
+    FDtoUnit.Directives.Add(TCodeSnippetDirective.Create('{$IFDEF FPC}{$MODE Delphi}{$ENDIF}'));
 
     FJsonUnit.UseUnit('OpenApiJson');
     FJsonUnit.UseUnit(FDtoUnit.Name);
 
-    FClientUnit.UseUnit('System.SysUtils');
+    FClientUnit.UseUnit('SysUtils');
     FClientUnit.UseUnit('OpenApiRest');
     FClientUnit.UseUnit(FJsonUnit.Name);
     FClientUnit.UseUnit(FDtoUnit.Name);
@@ -1564,6 +1565,7 @@ end;
 procedure TOpenApiImporter.GenerateRestService;
 var
   CodeType: TCodeTypeDeclaration;
+  ConverterMethod: TCodeMemberMethod;
 begin
   CodeType := TCodeTypeDeclaration.Create;
   FClientUnit._Types.Add(CodeType);
@@ -1571,8 +1573,9 @@ begin
   CodeType.IsClass := True;
   CodeType.BaseType := TCodeTypeReference.Create('TCustomRestService');
 
-  CodeType.AddFunction('CreateConverter', 'TJsonConverter', mvProtected)
-    .AddSnippet('Result := TJsonConverter.Create');
+  ConverterMethod := CodeType.AddFunction('CreateConverter', 'TCustomJsonConverter', mvProtected);
+  ConverterMethod.AddSnippet('Result := TJsonConverter.Create');
+  ConverterMethod.Directives := [mdOverride];
 
   CodeType.AddFunction('Converter', 'TJsonConverter', mvProtected)
     .AddSnippet('Result := TJsonConverter(inherited Converter)');
