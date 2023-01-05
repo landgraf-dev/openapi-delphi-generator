@@ -212,7 +212,7 @@ implementation
 uses
   // refactor this later to allow setting the default request factory based on Pascal language being used
 {$IFDEF FPC}
-  //OpenApiFpc,
+  OpenApiFpc,
 {$ELSE}
   OpenApiHttp,
 {$ENDIF}
