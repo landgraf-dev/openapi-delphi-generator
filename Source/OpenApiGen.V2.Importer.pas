@@ -4,7 +4,11 @@ interface
 
 uses
   System.SysUtils, System.IOUtils,
-  OpenApi.Document, OpenApi.Json.Serializer, OpenApiGen.Builder, OpenApiGen.Options;
+  OpenApi.Document,
+  OpenApi.Json.Serializer,
+  OpenApiGen.Builder,
+  OpenApiGen.Options,
+  OpenApiGen.V2.Analyzer;
 
 procedure GenerateSourceV2(const Content: string; Options: TBuilderOptions; GenOptions: TGeneratorOptions);
 
@@ -45,18 +49,25 @@ procedure GenerateSourceV2(const Content: string; Options: TBuilderOptions; GenO
 var
   Document: TOpenApiDocument;
   Importer: TOpenApiImporter;
+  Analyzer: TOpenApiAnalyzer;
 begin
-  Importer := TOpenApiImporter.Create(Options);
+  Document := TOpenApiDeserializer.JsonToDocument(Content);
   try
-    Document := TOpenApiDeserializer.JsonToDocument(Content);
+    Analyzer := TOpenApiAnalyzer.Create(Options);
     try
-      Importer.Build(Document);
-      GenerateSource(Importer, GenOptions.OutputFolder);
+      Analyzer.Analyze(Document);
+      Importer := TOpenApiImporter.Create(Options);
+      try
+        Importer.Build(Analyzer.MetaClient);
+        GenerateSource(Importer, GenOptions.OutputFolder);
+      finally
+        Importer.Free;
+      end;
     finally
-      Document.Free;
+      Analyzer.Free;
     end;
   finally
-    Importer.Free;
+    Document.Free;
   end;
 end;
 

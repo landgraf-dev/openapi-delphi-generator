@@ -1,0 +1,11 @@
+{
+    "ClientName": "PetStore",
+    "ServiceOptions": {
+        "SolvingMode": "MultipleClientsFromFirstTagAndOperationId",
+        "InterfaceGuids": {
+            "IPetService": "{1B571204-1E67-4BF3-A9E9-9C1489E8FF0C}",
+            "IStoreService": "{7C716BC0-88A7-431F-9232-5CA18E91B492}",
+            "IUserService": "{6AF38CCE-1A86-4473-9BC7-CAA13A24F719}"
+        }
+    }
+}

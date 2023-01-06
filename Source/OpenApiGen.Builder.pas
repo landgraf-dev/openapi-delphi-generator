@@ -3,16 +3,10 @@ unit OpenApiGen.Builder;
 interface
 
 uses
-  Generics.Collections, SysUtils, Classes, Character, TypInfo, StrUtils,
+  Generics.Collections, SysUtils, Classes, StrUtils,
   Bcl.Logging,
   Bcl.Code.MetaClasses,
   Bcl.Code.DelphiGenerator,
-  OpenAPI.Classes,
-  OpenAPI.Classes.Path,
-  OpenAPI.Classes.Operation,
-  OpenAPI.Classes.Parameter,
-  OpenAPI.Document,
-  OpenAPI.Types,
   XData.JSchema.Classes,
   OpenApiGen.Options,
   OpenApiGen.Metadata;
@@ -21,28 +15,16 @@ type
   EOpenApiImportException = class(Exception)
   end;
 
-  TListType = (ltAuto, ltArray, ltList);
-
-  TGetIdentifierProc = reference to procedure(var Name: string; const Original: string);
   TMethodCreatedProc = reference to procedure(Method: TCodeMemberMethod; Parent: TCodeTypeDeclaration);
   TTypeCreatedProc = reference to procedure(CodeType: TCodeTypeDeclaration);
   TPropCreatedProc = reference to procedure(Prop: TCodeMemberProperty; Field: TCodeMemberField; Parent: TCodeTypeDeclaration);
 
   TOpenApiImporter = class
   private
-    FDocument: TOpenApiDocument;
     FClientUnit: TCodeUnit;
     FDtoUnit: TCodeUnit;
     FJsonUnit: TCodeUnit;
     FLogger: ILogger;
-    FOnGetMethodName: TGetIdentifierProc;
-    FOnGetTypeName: TGetIdentifierProc;
-    FOnGetServiceName: TGetIdentifierProc;
-    FOnGetPropName: TGetIdentifierProc;
-    FOnGetFieldName: TGetIdentifierProc;
-    FOnGetInterfaceName: TGetIdentifierProc;
-    FOnGetServiceClassName: TGetIdentifierProc;
-
     FOnMethodCreated: TMethodCreatedProc;
     FOnPropCreated: TPropCreatedProc;
     FOnTypeCreated: TTypeCreatedProc;
@@ -51,7 +33,6 @@ type
     FOptions: TBuilderOptions;
     FMetaClient: TMetaClient;
     FOwnsOptions: Boolean;
-    function GetBaseUrl: string;
 
     procedure GenerateClient;
     procedure GenerateRestService;
@@ -75,53 +56,23 @@ type
     function GenerateJsonConverter: TCodeTypeDeclaration;
     procedure GenerateXmlComments(Comments: TList<TCodeComment>; const Tag, Value: string);
 
-    procedure ProcessPathItem(const Path: string; PathItem: TPathItem);
-    procedure ProcessOperation(const Path: string; PathItem: TPathItem;
-      Operation: TOperation; const HttpMethod: string);
-    function ProcessNaming(const S: string; Options: TNamingOptions): string;
-    function BuildMetaMethod(Method: TMetaMethod; const Path: string; Operation: TOperation; const HttpMethod: string): Boolean;
-    procedure BuildMetaParam(MetaParam: TMetaParam; Param: TParameter; const MethodName: string);
-    function MetaTypeFromSchema(Schema: TJsonSchema; const DefaultTypeName: string; ListType: TListType): IMetaType;
-    function MetaTypeFromString(const Format: string): IMetaType;
-    function MetaTypeFromInteger(const Format: string): IMetaType;
-    function MetaTypeFromArray(Schema: TArraySchema; const DefaultItemTypeName: string; ListType: TListType): IMetaType;
-    function MetaTypeFromReference(RefSchema: TReferenceSchema; const DefaultTypeName: string; ListType: TListType): IMetaType;
-    function MetaTypeFromObject(const Name: string; Schema: TObjectSchema): IMetaType;
-
     procedure RecreateCodeUnits;
     procedure DestroyCodeUnits;
     function HttpMethodToAttribute(const Method: string): string;
   strict protected
-    function ToId(const S: string): string; virtual;
     function CleanId(const S: string): string; virtual;
-    procedure DoGetPropName(var PropName: string; const Original: string);
-    procedure DoGetFieldName(var FieldName: string; const Original: string);
-    procedure DoGetMethodName(var MethodName: string; const Original: string);
-    procedure DoGetTypeName(var TypeName: string; const Original: string);
-    procedure DoGetServiceName(var ServiceName: string; const Original: string);
-    procedure DoGetInterfaceName(var InterfaceName: string; const Original: string);
-    procedure DoGetServiceClassName(var ServiceClassName: string; const Original: string);
     procedure DoMethodCreated(Method: TCodeMemberMethod; Parent: TCodeTypeDeclaration);
     procedure DoTypeCreated(CodeType: TCodeTypeDeclaration);
     procedure DoServiceInterfaceCreated(CodeType: TCodeTypeDeclaration);
     procedure DoServiceClassCreated(CodeType: TCodeTypeDeclaration);
     procedure DoPropCreated(Prop: TCodeMemberProperty; Field: TCodeMemberField; Parent: TCodeTypeDeclaration);
-    procedure DoSolveServiceOperation(var ServiceName, ServiceDescription, OperationName: string;
-      const Path: string; PathItem: TPathItem; Operation: TOperation);
   public
     constructor Create(Options: TBuilderOptions; AOwnsOptions: Boolean = False); reintroduce;
     destructor Destroy; override;
-    procedure Build(ADocument: TOpenApiDocument);
+    procedure Build(AMetaClient: TMetaClient);
     function CodeUnits: TArray<TCodeUnit>;
     property Options: TBuilderOptions read FOptions;
-    property Document: TOpenApiDocument read FDocument;
-    property OnGetMethodName: TGetIdentifierProc read FOnGetMethodName write FOnGetMethodName;
-    property OnGetTypeName: TGetIdentifierProc read FOnGetTypeName write FOnGetTypeName;
-    property OnGetServiceName: TGetIdentifierProc read FOnGetServiceName write FOnGetServiceName;
-    property OnGetPropName: TGetIdentifierProc read FOnGetPropName write FOnGetPropName;
-    property OnGetFieldName: TGetIdentifierProc read FOnGetFieldName write FOnGetFieldName;
-    property OnGetInterfaceName: TGetIdentifierProc read FOnGetInterfaceName write FOnGetInterfaceName;
-    property OnGetServiceClassName: TGetIdentifierProc read FOnGetServiceClassName write FOnGetServiceClassName;
+
     property OnMethodCreated: TMethodCreatedProc read FOnMethodCreated write FOnMethodCreated;
     property OnPropCreated: TPropCreatedProc read FOnPropCreated write FOnPropCreated;
     property OnTypeCreated: TTypeCreatedProc read FOnTypeCreated write FOnTypeCreated;
@@ -130,72 +81,23 @@ type
   end;
 
 const
-  MimeTypeJson = 'application/json';
-
   HeaderContentType = 'Content-Type';
   HeaderAccept = 'Accept';
 
-function ToPascalCase(const S: string): string;
-
 implementation
-
-uses
-  Bcl.Utils;
 
 const
   cFromJsonValue = 'FromJsonValue';
   cJsonValue = 'TJSONValue';
 
-function ToPascalCase(const S: string): string;
-var
-  I: Integer;
-  Convert: Boolean;
- begin
-  I := 1;
-  Result := '';
-  Convert := True;
-  while I <= Length(S) do
-  begin
-    if TBclUtils.IsLetter(S[I]) then
-    begin
-      if Convert then
-      begin
-        Result := Result + UpCase(S[I]);
-        Convert := False;
-      end
-      else
-        Result := Result + S[I];
-    end
-    else
-    if S[I] = '_' then
-      Convert := True
-    else
-      Result := Result + S[I];
-    Inc(I);
-  end;
-end;
-
 { TOpenApiImporter }
 
-procedure TOpenApiImporter.Build(ADocument: TOpenApiDocument);
+procedure TOpenApiImporter.Build(AMetaClient: TMetaClient);
 var
-  Path: TPair<string, TPathItem>;
-  Definition: TPair<string, TJsonSchema>;
   MetaType: IMetaType;
   Service: TMetaService;
 begin
-  FDocument := ADocument;
-
-  // Build meta information
-  FMetaClient.Clear;
-  for Definition in Document.Definitions do
-    MetaTypeFromSchema(Definition.Value, Definition.Key, TListType.ltAuto);
-  for Path in Document.Paths do
-    ProcessPathItem(Path.Key, Path.Value);
-  FMetaClient.InterfaceName := Format('I%sClient', [Options.ClientName]);
-  FMetaClient.ClientClass := Format('T%sClient', [Options.ClientName]);
-  FMetaClient.ConfigClass := Format('T%sConfig', [Options.ClientName]);
-  FMetaClient.BaseUrl := GetBaseUrl;
+  FMetaClient := AMetaClient;
 
   // Generate code units
   RecreateCodeUnits;
@@ -249,112 +151,6 @@ begin
 
   // Generate client
   GenerateClient;
-end;
-
-function TOpenApiImporter.BuildMetaMethod(Method: TMetaMethod; const Path: string; Operation: TOperation;
-  const HttpMethod: string): Boolean;
-var
-  Param: TParameter;
-  ResponseType: IMetaType;
-  ResponseItem: TPair<string, TResponse>;
-  TargetResponseType: IMetaType;
-  MetaParam: TMetaParam;
-  ErrorMsg: string;
-  ListType: TListType;
-  ConsumesJson: Boolean;
-  ProducesJson: Boolean;
-begin
-  Result := False;
-  try
-    ConsumesJson := Operation.Consumes.Contains(MimeTypeJson);
-    ProducesJson := Operation.Produces.Contains(MimeTypeJson);
-
-    Method.HttpMethod := HttpMethod;
-    Method.UrlPath := Path;
-    Method.Summary := Operation.Summary;
-    Method.Remarks := Operation.Description;
-
-    for Param in Operation.Parameters do
-    begin
-      if Param.InBody then
-        if ConsumesJson then
-          Method.Consumes := MimeTypeJson
-        else
-          raise EOpenApiImportException.CreateFmt('Body parameter %s is present by method does not consume JSON', [Param.Name]);
-
-      MetaParam := TMetaParam.Create;
-      Method.Params.Add(MetaParam);
-      MetaParam.Description := Param.Description;
-      BuildMetaParam(MetaParam, Param, Method.CodeName);
-    end;
-
-    ResponseType := nil;
-    for ResponseItem in Operation.Responses do
-      if ((ResponseItem.Key = 'default') or (StrToInt(ResponseItem.Key) < 300)) and Assigned(ResponseItem.Value.Schema) then
-      begin
-        if Options.XDataService then
-          ListType := TListType.ltArray
-        else
-          ListType := TListType.ltAuto;
-        TargetResponseType := MetaTypeFromSchema(ResponseItem.Value.Schema, Method.CodeName + 'Output', ListType);
-        if ResponseType = nil then
-          ResponseType := TargetResponseType
-        else
-        if ResponseType.TypeName <> TargetResponseType.TypeName then
-          raise EOpenApiImportException.CreateFmt('Ambiguous response types: %s and %s', [ResponseType.TypeName, TargetResponseType.TypeName]);
-      end;
-    Method.ReturnType := ResponseType;
-    if (ResponseType <> nil) and not ResponseType.IsBinary then
-      if ProducesJson then
-        Method.Produces := MimeTypeJson
-      else
-        raise EOpenApiImportException.Create('Method returns data be method does not produce JSON');
-    Result := True;
-  except
-    on E: EOpenApiImportException do
-    begin
-      Method.Ignore := True;
-      ErrorMsg := Format('Import of %s %s failed: %s', [HttpMethod, Path, E.Message]);
-      FLogger.Warning(ErrorMsg);
-    end
-    else
-      raise;
-  end;
-end;
-
-procedure TOpenApiImporter.BuildMetaParam(MetaParam: TMetaParam; Param: TParameter; const MethodName: string);
-begin
-  MetaParam.RestName := Param.Name;
-  MetaParam.CodeName := ProcessNaming(Param.Name, Options.ServiceOptions.ParamNaming);
-  case Param.&In of
-    Body:
-      begin
-        MetaParam.ParamType := MetaTypeFromSchema(Param.Schema, MethodName + 'Input', TListType.ltAuto);
-        MetaParam.Location := TParamLocation.plBody;
-      end;
-    Query:
-      begin
-        MetaParam.ParamType := MetaTypeFromSchema(Param.Schema, MethodName + Param.Name, TListType.ltAuto);
-        MetaParam.Location := TParamLocation.plQuery;
-      end;
-    Path:
-      begin
-        MetaParam.ParamType := MetaTypeFromSchema(Param.Schema, MethodName + Param.Name, TListType.ltAuto);
-        MetaParam.Location := TParamLocation.plUrl;
-      end;
-    FormData:
-      begin
-        MetaParam.ParamType := MetaTypeFromSchema(Param.Schema, MethodName + Param.Name, TListType.ltAuto);
-        MetaParam.Location := TParamLocation.plForm;
-      end;
-    Header:
-      begin
-        MetaParam.ParamType := MetaTypeFromSchema(Param.Schema, MethodName + Param.Name, TListType.ltAuto);
-        MetaParam.Location := TParamLocation.plHeader;
-      end;
-  else
-    raise EOpenApiImportException.CreateFmt('Unsupported parameter type: %s', [GetEnumName(TypeInfo(TLocation), Ord(Param.&In))]);
-  end;
 end;
 
 procedure TOpenApiImporter.GenerateService(Service: TMetaService);
@@ -516,29 +312,6 @@ begin
   GenerateXmlComments(CodeMethod.Comments, 'remarks', MetaMethod.Remarks);
 end;
 
-function TOpenApiImporter.GetBaseUrl: string;
-begin
-  Result := Document.Host;
-  if EndsStr('/', Result) then
-    Result := Copy(Result, 1, Length(Result) - 1);
-  if not StartsStr('/', Document.BasePath) then
-    Result := Result + '/';
-  Result := Result + Document.BasePath;
-
-  if Pos('://', Result) = 0 then
-  begin
-    if TProtocol.Https in Document.Schemes then
-      Result := 'https://' + Result
-    else
-    if TProtocol.Http in Document.Schemes then
-      Result := 'http://' + Result
-    else
-      // hard code this, but it should use same scheme as the original
-      // OpenAPI document
-      Result := 'https://' + Result;
-  end;
-end;
-
 function TOpenApiImporter.CleanId(const S: string): string;
 begin
   if StartsStr('&', S) then
@@ -561,7 +334,6 @@ begin
   FOptions := Options;
   FOwnsOptions := AOwnsOptions;
   FLogger := TLogManager.Instance.GetLogger(Self);
-  FMetaClient := TMetaClient.Create;
 end;
 
 procedure TOpenApiImporter.GenerateArrayDeserialization(ArrType: TArrayMetaType);
@@ -1150,145 +922,8 @@ begin
   Result := Converter;
 end;
 
-function TOpenApiImporter.MetaTypeFromArray(Schema: TArraySchema; const DefaultItemTypeName: string;
-  ListType: TListType): IMetaType;
-var
-  ItemType: IMetaType;
-begin
-  if Schema.ValidateItemByPosition then
-    raise EOpenApiImportException.CreateFmt('Array schema validated by position not supported (%s)', [DefaultItemTypeName]);
-  if Schema.ItemSchemas.Count <> 1 then
-    raise EOpenApiImportException.CreateFmt('Expecting only one item schema in array (%s)', [DefaultItemTypeName]);
-
-  ItemType := MetaTypeFromSchema(Schema.ItemSchemas[0], DefaultItemTypeName, ListType);
-  if ListType = TListType.ltAuto then
-  begin
-    if ItemType.IsManaged then
-      ListType := TListType.ltList
-    else
-      ListType := TListType.ltArray;
-  end;
-
-  if ListType = TListType.ltArray then
-    Result := TArrayMetaType.Create(ItemType)
-  else
-  if ItemType.IsManaged then
-    Result := TObjectListMetaType.Create(ItemType)
-  else
-    Result := TListMetaType.Create(ItemType);
-end;
-
-function TOpenApiImporter.MetaTypeFromInteger(const Format: string): IMetaType;
-begin
-  if Format = 'int64' then
-    Result := TInt64MetaType.Create
-  else
-    Result := TIntegerMetaType.Create
-end;
-
-function TOpenApiImporter.MetaTypeFromObject(const Name: string; Schema: TObjectSchema): IMetaType;
-var
-  TypeName: string;
-  SchemaProp: TPair<string, TJsonSchema>;
-  PropName: string;
-  FieldName: string;
-  ObjType: TObjectMetaType;
-  MetaProp: TMetaProperty;
-begin
-  DoGetTypeName(TypeName, Name);
-  ObjType := TObjectMetaType.Create(TypeName);
-  Result := ObjType;
-  ObjType.SetDescription(Schema.Description);
-  for SchemaProp in Schema.Properties do
-  begin
-    MetaProp := TMetaProperty.Create;
-    ObjType.Props.Add(MetaProp);
-
-    DoGetPropName(PropName, SchemaProp.Key);
-    DoGetFieldName(FieldName, SchemaProp.Key);
-
-    MetaProp.RestName := SchemaProp.Key;
-    MetaProp.PropName := PropName;
-    MetaProp.FieldName := FieldName;
-    MetaProp.Description := SchemaProp.Value.Description;
-    MetaProp.Required := Schema.Required.IndexOf(SchemaProp.Key) >= 0;
-    MetaProp.PropType := MetaTypeFromSchema(SchemaProp.Value, Name + PropName, TListType.ltList);
-    if Options.XDataService and not MetaProp.Required and not MetaProp.PropType.IsManaged then
-      MetaProp.PropType := TNullableMetaType.Create(MetaProp.PropType);
-  end;
-end;
-
-function TOpenApiImporter.MetaTypeFromReference(RefSchema: TReferenceSchema;
-  const DefaultTypeName: string; ListType: TListType): IMetaType;
-var
-  ReferencedSchema: TJsonSchema;
-begin
-  if not Document.Definitions.TryGetValue(RefSchema.DefinitionName, ReferencedSchema) then
-    raise EOpenApiImportException.CreateFmt('Reference not in definition "%s"', [RefSchema.Ref]);
-
-  // if it's object, then just reference the type. Otherwise, use the referenced type inline
-  if ReferencedSchema is TObjectSchema then
-    Result := MetaTypeFromObject(RefSchema.DefinitionName, TObjectSchema(ReferencedSchema))
-  else
-    Result := MetaTypeFromSchema(ReferencedSchema, DefaultTypeName, ListType);
-end;
-
-function TOpenApiImporter.MetaTypeFromSchema(Schema: TJsonSchema; const DefaultTypeName: string; ListType: TListType): IMetaType;
-begin
-  if Schema = nil then
-    raise EOpenApiImportException.Create('Schema not defined');
-
-  if Schema is TStringSchema then
-    Result := MetaTypeFromString(Schema.Format)
-  else
-  if Schema is TNumberSchema then
-    Result := TDoubleMetaType.Create
-  else
-  if Schema is TIntegerSchema then
-    Result := MetaTypeFromInteger(Schema.Format)
-  else
-  if Schema is TBooleanSchema then
-    Result := TBooleanMetaType.Create
-  else
-  if Schema is TFileSchema then
-    Result := TBinaryMetaType.Create
-  else
-  if Schema is TReferenceSchema then
-    Result := MetaTypeFromReference(TReferenceSchema(Schema), DefaultTypeName, ListType)
-  else
-  if Schema is TObjectSchema then
-    Result := MetaTypeFromObject(DefaultTypeName, TObjectSchema(Schema))
-  else
-  if Schema is TArraySchema then
-    Result := MetaTypeFromArray(TArraySchema(Schema), DefaultTypeName + 'Item', ListType)
-  else
-    raise EOpenApiImportException.CreateFmt('Unsupported schema type: %s', [Schema.ClassName]);
-
-  if Result is TObjectMetaType and (FMetaClient.FindMetaType(Result.TypeName) = nil) then
-    FMetaClient.MetaTypes.Add(Result);
-  if Result is TArrayMetaType and (FMetaClient.FindMetaType(Result.TypeName) = nil) then
-    FMetaClient.MetaTypes.Add(Result);
-  if Result is TListMetaType and (FMetaClient.FindMetaType(Result.TypeName) = nil) then
-    FMetaClient.MetaTypes.Add(Result);
-end;
-
-function TOpenApiImporter.MetaTypeFromString(const Format: string): IMetaType;
-begin
-  if Format = 'date' then
-    Result := TDateMetaType.Create
-  else
-  if Format = 'date-time' then
-    Result := TDateTimeMetaType.Create
-  else
-  if Format = 'byte' then
-    Result := TBytesMetaType.Create
-  else
-    Result := TStringMetaType.Create;
-end;
-
 destructor TOpenApiImporter.Destroy;
 begin
-  FMetaClient.Free;
   if FOwnsOptions then
     FOptions.Free;
   DestroyCodeUnits;
@@ -1300,34 +935,6 @@ begin
   FreeAndNil(FClientUnit);
   FreeAndNil(FDtoUnit);
   FreeAndNil(FJsonUnit);
-end;
-
-procedure TOpenApiImporter.DoGetFieldName(var FieldName: string; const Original: string);
-begin
-  FieldName := ProcessNaming(Original, Options.DTOOptions.FieldNaming);
-  if Assigned(FOnGetFieldName) then
-    FOnGetPropName(FieldName, Original);
-end;
-
-procedure TOpenApiImporter.DoGetInterfaceName(var InterfaceName: string; const Original: string);
-begin
-  InterfaceName := ProcessNaming(Original, Options.ServiceOptions.InterfaceNaming);
-  if Assigned(FOnGetInterfaceName) then
-    FOnGetInterfaceName(InterfaceName, Original);
-end;
-
-procedure TOpenApiImporter.DoGetMethodName(var MethodName: string; const Original: string);
-begin
-  MethodName := ProcessNaming(Original, Options.ServiceOptions.MethodNaming);
-  if Assigned(FOnGetMethodName) then
-    FOnGetMethodName(MethodName, Original);
-end;
-
-procedure TOpenApiImporter.DoGetPropName(var PropName: string; const Original: string);
-begin
-  PropName := ProcessNaming(Original, Options.DTOOptions.PropNaming);
-  if Assigned(FOnGetPropName) then
-    FOnGetPropName(PropName, Original);
 end;
 
 function TOpenApiImporter.GenerateServiceClass(const TypeName, InterfaceName: string): TCodeTypeDeclaration;
@@ -1347,20 +954,6 @@ begin
   DoServiceClassCreated(Service);
 
   Result := Service;
-end;
-
-procedure TOpenApiImporter.DoGetServiceClassName(var ServiceClassName: string; const Original: string);
-begin
-  ServiceClassName := ProcessNaming(Original, Options.ServiceOptions.ClassNaming);
-  if Assigned(FOnGetServiceClassName) then
-    FOnGetServiceClassName(ServiceClassName, Original);
-end;
-
-procedure TOpenApiImporter.DoGetServiceName(var ServiceName: string; const Original: string);
-begin
-  ServiceName := ProcessNaming(Original, Options.ServiceOptions.ServiceNaming);
-  if Assigned(FOnGetServiceName) then
-    FOnGetServiceName(ServiceName, Original);
 end;
 
 function TOpenApiImporter.GenerateServiceInterface(MetaService: TMetaService): TCodeTypeDeclaration;
@@ -1401,13 +994,6 @@ begin
   Result := Service;
 end;
 
-procedure TOpenApiImporter.DoGetTypeName(var TypeName: string; const Original: string);
-begin
-  TypeName := ProcessNaming(Original, Options.DTOOptions.ClassNaming);
-  if Assigned(FOnGetTypeName) then
-    FOnGetTypeName(TypeName, Original);
-end;
-
 procedure TOpenApiImporter.DoServiceClassCreated(CodeType: TCodeTypeDeclaration);
 begin
   if Assigned(FOnServiceClassCreated) then
@@ -1430,42 +1016,6 @@ procedure TOpenApiImporter.DoPropCreated(Prop: TCodeMemberProperty; Field: TCode
 begin
   if Assigned(FOnPropCreated) then
     FOnPropCreated(Prop, Field, Parent);
-end;
-
-procedure TOpenApiImporter.DoSolveServiceOperation(var ServiceName, ServiceDescription, OperationName: string; const Path: string;
-  PathItem: TPathItem; Operation: TOperation);
-var
-  Tag: TTag;
-  P: Integer;
-begin
-  ServiceDescription := '';
-  case Options.ServiceOptions.SolvingMode of
-    TServiceSolvingMode.MultipleClientsFromFirstTagAndOperationId:
-      begin
-        if Operation.Tags.Count > 0 then
-        begin
-          ServiceName := Operation.Tags[0];
-          Tag := FDocument.Tags.Find(ServiceName);
-          if Tag <> nil then
-            ServiceDescription := Tag.Description;
-        end
-        else
-          ServiceName := '';
-        OperationName := Operation.OperationId;
-      end;
-    TServiceSolvingMode.MultipleClientsFromXDataOperationId:
-      begin
-        P := Pos('.', Operation.OperationId);
-        ServiceName := Copy(Operation.OperationId, 1, P - 1);
-        OperationName := Copy(Operation.OperationId, P + 1);
-        if StartsText('I', ServiceName) and EndsText('Service', ServiceName) then
-          ServiceName := Copy(ServiceName, 2, Length(ServiceName) - 8);
-      end;
-  else
-    // TServiceSolvingMode.SingleClientFromOperationId
-    ServiceName := '';
-    OperationName := Operation.OperationId;
-  end;
 end;
 
 procedure TOpenApiImporter.DoTypeCreated(CodeType: TCodeTypeDeclaration);
@@ -1492,65 +1042,6 @@ begin
     Result := 'HttpPatch'
   else
     raise EOpenApiImportException.CreateFmt('Unsupported HTTP method: %s', [Method]);
-end;
-
-function TOpenApiImporter.ProcessNaming(const S: string; Options: TNamingOptions): string;
-begin
-  if Options.Mapping.TryGetValue(S, Result) then
-    Exit;
-
-  Result := ToId(S);
-  if Options.PascalCase then
-    Result := ToPascalCase(Result);
-  if Options.FormatString <> '' then
-    Result := Format(Options.FormatString, [Result]);
-  if TDelphiCodeGenerator.IsReservedWord(Result) then
-    Result := '&' + Result;
-
-  if Options.Mapping.ContainsKey(Result) then
-    Result := Options.Mapping[Result];
-end;
-
-procedure TOpenApiImporter.ProcessOperation(const Path: string; PathItem: TPathItem;
-  Operation: TOperation; const HttpMethod: string);
-var
-  OperationName: string;
-  MethodName: string;
-  ServiceName: string;
-  MetaMethod: TMetaMethod;
-  Service: TMetaService;
-  InterfaceName: string;
-  ServiceClassName: string;
-  ServiceDescription: string;
-begin
-  if Operation = nil then Exit;
-
-  // Service Mode
-  DoSolveServiceOperation(ServiceName, ServiceDescription, OperationName, Path, PathItem, Operation);
-
-  // Find or create the service
-  DoGetServiceName(ServiceName, ServiceName);
-  Service := FMetaClient.FindService(ServiceName);
-  if Service = nil then
-  begin
-    Service := TMetaService.Create;
-    FMetaClient.Services.Add(Service);
-    Service.ServiceName := ServiceName;
-    Service.Description := ServiceDescription;
-    DoGetInterfaceName(InterfaceName, ServiceName);
-    Service.InterfaceName := InterfaceName;
-    DoGetServiceClassName(ServiceClassName, ServiceName);
-    Service.ServiceClass := ServiceClassName;
-  end;
-
-  // Method name
-  DoGetMethodName(MethodName, OperationName);
-  MetaMethod := TMetaMethod.Create;
-  Service.Methods.Add(MetaMethod);
-  MetaMethod.CodeName := MethodName;
-  if MetaMethod.CodeName = '' then
-    MetaMethod.Ignore := True;
-  BuildMetaMethod(MetaMethod, Path, Operation, HttpMethod);
 end;
 
 function TOpenApiImporter.GenerateMethodParam(CodeMethod: TCodeMemberMethod; MetaParam: TMetaParam): TCodeParameterDeclaration;
@@ -1584,17 +1075,6 @@ begin
     .AddSnippet('Result := TJsonConverter(inherited Converter)');
 end;
 
-procedure TOpenApiImporter.ProcessPathItem(const Path: string; PathItem: TPathItem);
-begin
-  ProcessOperation(Path, PathItem, PathItem.Get, 'GET');
-  ProcessOperation(Path, PathItem, PathItem.Put, 'PUT');
-  ProcessOperation(Path, PathItem, PathItem.Post, 'POST');
-  ProcessOperation(Path, PathItem, PathItem.Delete, 'DELETE');
-  ProcessOperation(Path, PathItem, PathItem.Patch, 'PATCH');
-  ProcessOperation(Path, PathItem, PathItem.Options, 'OPTIONS');
-  ProcessOperation(Path, PathItem, PathItem.Head, 'HEAD');
-end;
-
 procedure TOpenApiImporter.RecreateCodeUnits;
 begin
   DestroyCodeUnits;
@@ -1606,18 +1086,6 @@ begin
 
   FJsonUnit := TCodeUnit.Create;
   FJsonUnit.Name := Options.ClientName + 'Json';
-end;
-
-function TOpenApiImporter.ToId(const S: string): string;
-var
-  I: Integer;
-begin
-  Result := S;
-  for I := 1 to Length(S) do
-    if not (TBclUtils.IsDigit(S[I]) or TBclUtils.IsLetter(S[I]) or (S[I] = '_')) then
-      Result[I] := '_';
-  if (Result <> '') and TBclUtils.IsDigit(Result[1]) then
-    Result := '_' + Result;
 end;
 
 end.

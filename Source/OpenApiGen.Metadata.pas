@@ -3,8 +3,7 @@ unit OpenApiGen.Metadata;
 interface
 
 uses
-  Generics.Collections, SysUtils,
-  Bcl.Code.MetaClasses;
+  Generics.Collections, SysUtils;
 
 type
   IMetaType = interface
@@ -543,6 +542,5 @@ begin
       Exit(Service);
   Result := nil;
 end;
-
 
 end.
