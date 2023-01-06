@@ -1,10 +1,12 @@
 unit PetStoreDtos;
 
+{$IFDEF FPC}{$MODE Delphi}{$ENDIF}
+
 interface
 
 uses
-  System.Generics.Collections, 
-  System.SysUtils;
+  Generics.Collections, 
+  SysUtils;
 
 type
   stringArray = array of string;

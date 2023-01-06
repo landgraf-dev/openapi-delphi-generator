@@ -3,7 +3,7 @@ unit PetStoreClient;
 interface
 
 uses
-  System.SysUtils, 
+  SysUtils, 
   OpenApiRest, 
   PetStoreJson, 
   PetStoreDtos;
@@ -18,7 +18,7 @@ type
   
   TRestService = class(TCustomRestService)
   protected
-    function CreateConverter: TJsonConverter;
+    function CreateConverter: TCustomJsonConverter; override;
     function Converter: TJsonConverter;
   end;
   
@@ -358,7 +358,7 @@ implementation
 
 { TRestService }
 
-function TRestService.CreateConverter: TJsonConverter;
+function TRestService.CreateConverter: TCustomJsonConverter;
 begin
   Result := TJsonConverter.Create;
 end;
