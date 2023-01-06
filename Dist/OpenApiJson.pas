@@ -1,5 +1,7 @@
 unit OpenApiJson;
 
+{$IFDEF FPC}{$MODE Delphi}{$ENDIF}
+
 interface
 
 uses
@@ -37,7 +39,7 @@ type
 
     // methods for JSON object manipulation
     procedure ObjAddProp(JObj: TJSONValue; const Name: string; Value: TJSONValue); virtual;
-    function ObjContains(JObj: TJSONValue; const Name: string; var Value: TJSONValue): Boolean; virtual;
+    function ObjContains(JObj: TJSONValue; const Name: string; out Value: TJSONValue): Boolean; virtual;
 
     // methods for JSON array manipulation
     procedure ArrayAdd(JArr: TJSONValue; Value: TJSONValue); virtual;
@@ -310,10 +312,10 @@ begin
 {$ENDIF}
 end;
 
-function TJsonWrapper.ObjContains(JObj: TJSONValue; const Name: string; var Value: TJSONValue): Boolean;
+function TJsonWrapper.ObjContains(JObj: TJSONValue; const Name: string; out Value: TJSONValue): Boolean;
 begin
 {$IFDEF FPC}
-  Value := TJSONObject(JObj).Elements[Name];
+  Value := TJSONObject(JObj).Find(Name);
 {$ELSE}
   Value := TJSONObject(JObj).GetValue(Name);
 {$ENDIF}

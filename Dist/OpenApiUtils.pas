@@ -1,5 +1,7 @@
 unit OpenApiUtils;
 
+{$IFDEF FPC}{$MODE Delphi}{$ENDIF}
+
 {$IFNDEF FPC}
   {$IF CompilerVersion >= 24}
     {$LEGACYIFEND ON}
@@ -158,6 +160,7 @@ var
   Packet: TPacket;
   Len: integer;
 begin
+  Result := nil;
   SetLength(Result, ((Length(Input) + 2) div 4) * 3);
   StrLen := Length(Input);
   Len := 0;
@@ -185,8 +188,8 @@ var
   L: integer;
   H: string;
 begin
+  Result := '';
   Bytes := TEncoding.UTF8.GetBytes(S);
-
   SetLength(Result, Length(Bytes) * 3); // final string will be maximum 3 times the original bytes
   L := 1;
   for I := 0 to Length(Bytes) - 1 do

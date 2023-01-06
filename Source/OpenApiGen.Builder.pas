@@ -1568,6 +1568,7 @@ end;
 procedure TOpenApiImporter.GenerateRestService;
 var
   CodeType: TCodeTypeDeclaration;
+  ConverterMethod: TCodeMemberMethod;
 begin
   CodeType := TCodeTypeDeclaration.Create;
   FClientUnit._Types.Add(CodeType);
@@ -1575,8 +1576,9 @@ begin
   CodeType.IsClass := True;
   CodeType.BaseType := TCodeTypeReference.Create('TCustomRestService');
 
-  CodeType.AddFunction('CreateConverter', 'TJsonConverter', mvProtected)
-    .AddSnippet('Result := TJsonConverter.Create');
+  ConverterMethod := CodeType.AddFunction('CreateConverter', 'TCustomJsonConverter', mvProtected);
+  ConverterMethod.AddSnippet('Result := TJsonConverter.Create');
+  ConverterMethod.Directives := [mdOverride];
 
   CodeType.AddFunction('Converter', 'TJsonConverter', mvProtected)
     .AddSnippet('Result := TJsonConverter(inherited Converter)');
