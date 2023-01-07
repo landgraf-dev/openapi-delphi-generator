@@ -1,5 +1,5 @@
 {
-    "ClientName": "PetStore",
+    "ClientName": "PetStore3",
     "ServiceOptions": {
         "SolvingMode": "MultipleClientsFromFirstTagAndOperationId",
         "InterfaceGuids": {
