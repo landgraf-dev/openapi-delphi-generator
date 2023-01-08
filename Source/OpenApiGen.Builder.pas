@@ -474,10 +474,11 @@ begin
   CodeType.IsInterface := True;
   CodeType.BaseType := TCodeTypeReference.Create('IRestClient');
   for Service in FMetaClient.Services do
-  begin
-    CodeMethod := CodeType.AddFunction(Service.ServiceName, Service.InterfaceName, mvPublic);
-    GenerateXmlComments(CodeMethod.Comments, 'summary', Service.Description);
-  end;
+    if FClientUnit.FindType(Service.InterfaceName) <> nil then
+    begin
+      CodeMethod := CodeType.AddFunction(Service.ServiceName, Service.InterfaceName, mvPublic);
+      GenerateXmlComments(CodeMethod.Comments, 'summary', Service.Description);
+    end;
 
   // Generate client class
   CodeType := TCodeTypeDeclaration.Create;
@@ -488,10 +489,11 @@ begin
   CodeType.InterfaceTypes.Add(TCodeTypeReference.Create(FMetaClient.InterfaceName));
 
   for Service in FMetaClient.Services do
-  begin
-    CodeMethod := CodeType.AddFunction(Service.ServiceName, Service.InterfaceName, mvPublic);
-    CodeMethod.AddSnippetFmt('Result := %s.Create(Config)', [Service.ServiceClass]);
-  end;
+    if FClientUnit.FindType(Service.InterfaceName) <> nil then
+    begin
+      CodeMethod := CodeType.AddFunction(Service.ServiceName, Service.InterfaceName, mvPublic);
+      CodeMethod.AddSnippetFmt('Result := %s.Create(Config)', [Service.ServiceClass]);
+    end;
 
   CodeType.AddConstructor
     .AddSnippetFmt('inherited Create(%s.Create)', [FMetaClient.ConfigClass]);

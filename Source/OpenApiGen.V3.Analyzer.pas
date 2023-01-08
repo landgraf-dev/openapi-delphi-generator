@@ -182,29 +182,29 @@ begin
   case Options.ServiceOptions.SolvingMode of
     TServiceSolvingMode.MultipleClientsFromFirstTagAndOperationId:
       begin
-//        if Operation.Tags.Count > 0 then
-//        begin
-//          ServiceName := Operation.Tags[0];
-//          Tag := FDocument.Tags.Find(ServiceName);
-//          if Tag <> nil then
-//            ServiceDescription := Tag.Description;
-//        end
-//        else
-//          ServiceName := '';
-//        OperationName := Operation.OperationId;
+        if Operation.Tags.Count > 0 then
+        begin
+          ServiceName := Operation.Tags[0];
+          Tag := FDocument.Tags.Find(ServiceName);
+          if Tag <> nil then
+            ServiceDescription := Tag.Description;
+        end
+        else
+          ServiceName := '';
+        OperationName := Operation.OperationId;
       end;
     TServiceSolvingMode.MultipleClientsFromXDataOperationId:
       begin
-//        P := Pos('.', Operation.OperationId);
-//        ServiceName := Copy(Operation.OperationId, 1, P - 1);
-//        OperationName := Copy(Operation.OperationId, P + 1);
-//        if StartsText('I', ServiceName) and EndsText('Service', ServiceName) then
-//          ServiceName := Copy(ServiceName, 2, Length(ServiceName) - 8);
+        P := Pos('.', Operation.OperationId);
+        ServiceName := Copy(Operation.OperationId, 1, P - 1);
+        OperationName := Copy(Operation.OperationId, P + 1);
+        if StartsText('I', ServiceName) and EndsText('Service', ServiceName) then
+          ServiceName := Copy(ServiceName, 2, Length(ServiceName) - 8);
       end;
   else
     // TServiceSolvingMode.SingleClientFromOperationId
     ServiceName := '';
-//    OperationName := Operation.OperationId;
+    OperationName := Operation.OperationId;
   end;
 end;
 
