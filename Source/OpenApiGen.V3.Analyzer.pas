@@ -159,25 +159,64 @@ begin
 end;
 
 procedure TOpenApiAnalyzer.BuildMetaParam(MetaParam: TMetaParam; Param: TParameter; const MethodName: string);
+
+  procedure DefineStyleAndExplode(DefaultStyle: TStyle; out Style: TStyle; out Explode: Boolean);
+  begin
+    if Param.Style.IsAssigned then
+      Style := Param.Style
+    else
+      Style := DefaultStyle;
+    if Param.Explode.IsAssigned then
+      Explode := Param.Explode
+    else
+      Explode := Style = TStyle.Form;
+  end;
+
+var
+  Style: TStyle;
+  Explode: Boolean;
 begin
+  if Param.Schema = nil then
+    raise EOpenApiAnalyzerException.CreateFmt('%.%s: missing schema', [MethodName, Param.Name]);
+  if Param.Content <> nil then
+    raise EOpenApiAnalyzerException.CreateFmt('%.%s: content property not supported', [MethodName, Param.Name]);
+
   MetaParam.RestName := Param.Name;
   MetaParam.CodeName := ProcessNaming(Param.Name, Options.ServiceOptions.ParamNaming);
   case Param.&In of
     Query:
       begin
+        DefineStyleAndExplode(TStyle.Form, Style, Explode);
+        if Style <> TStyle.Form then
+          raise EOpenApiAnalyzerException.CreateFmt('%.%s: style not supported', [MethodName, Param.Name]);
+
         MetaParam.ParamType := MetaTypeFromSchema(Param.Schema, MethodName + Param.Name, TListType.ltAuto);
         MetaParam.Location := TParamLocation.plQuery;
       end;
     Path:
       begin
+        DefineStyleAndExplode(TStyle.Simple, Style, Explode);
+        if Style <> TStyle.Simple then
+          raise EOpenApiAnalyzerException.CreateFmt('%.%s: style not supported', [MethodName, Param.Name]);
+
         MetaParam.ParamType := MetaTypeFromSchema(Param.Schema, MethodName + Param.Name, TListType.ltAuto);
         MetaParam.Location := TParamLocation.plUrl;
       end;
     Header:
       begin
+        DefineStyleAndExplode(TStyle.Simple, Style, Explode);
+        if Style <> TStyle.Simple then
+          raise EOpenApiAnalyzerException.CreateFmt('%.%s: style not supported', [MethodName, Param.Name]);
+
         MetaParam.ParamType := MetaTypeFromSchema(Param.Schema, MethodName + Param.Name, TListType.ltAuto);
         MetaParam.Location := TParamLocation.plHeader;
       end;
+//    Cookie:
+//      begin
+//        DefineStyleAndExplode(TStyle.Form, Style, Explode);
+//        MetaParam.ParamType := MetaTypeFromSchema(Param.Schema, MethodName + Param.Name, TListType.ltAuto);
+//        MetaParam.Location := TParamLocation.plCookie;
+//      end;
   else
     raise EOpenApiAnalyzerException.CreateFmt('Unsupported parameter type: %s', [GetEnumName(TypeInfo(TLocation), Ord(Param.&In))]);
   end;
