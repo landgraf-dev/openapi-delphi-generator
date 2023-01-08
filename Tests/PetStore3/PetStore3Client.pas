@@ -9,15 +9,8 @@ uses
   PetStore3Dtos;
 
 type
-  TRestService = class;
   TPetStore3Config = class;
   TPetStore3Client = class;
-  
-  TRestService = class(TCustomRestService)
-  protected
-    function CreateConverter: TCustomJsonConverter; override;
-    function Converter: TJsonConverter;
-  end;
   
   TPetStore3Config = class(TCustomRestConfig)
   public
@@ -33,18 +26,6 @@ type
   end;
   
 implementation
-
-{ TRestService }
-
-function TRestService.CreateConverter: TCustomJsonConverter;
-begin
-  Result := TJsonConverter.Create;
-end;
-
-function TRestService.Converter: TJsonConverter;
-begin
-  Result := TJsonConverter(inherited Converter);
-end;
 
 { TPetStore3Config }
 

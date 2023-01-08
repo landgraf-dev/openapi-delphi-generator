@@ -34,8 +34,13 @@ type
     FMetaClient: TMetaClient;
     FOwnsOptions: Boolean;
 
+    FRestServiceType: TCodeTypeDeclaration;
+    FJsonConverterType: TCodeTypeDeclaration;
+
+    function RestServiceType: TCodeTypeDeclaration;
+    function JsonConverterType: TCodeTypeDeclaration;
+
     procedure GenerateClient;
-    procedure GenerateRestService;
     procedure GenerateConfig;
     procedure GenerateServiceInterfaceMethod(CodeMethod: TCodeMemberMethod; MetaMethod: TMetaMethod);
     procedure GenerateServiceClassMethod(CodeMethod: TCodeMemberMethod; MetaMethod: TMetaMethod);
@@ -53,7 +58,6 @@ type
     procedure GenerateService(Service: TMetaService);
     function GenerateServiceInterface(MetaService: TMetaService): TCodeTypeDeclaration;
     function GenerateServiceClass(const TypeName, InterfaceName: string): TCodeTypeDeclaration;
-    function GenerateJsonConverter: TCodeTypeDeclaration;
     procedure GenerateXmlComments(Comments: TList<TCodeComment>; const Tag, Value: string);
 
     procedure RecreateCodeUnits;
@@ -138,9 +142,6 @@ begin
     if MetaType is TListMetaType then
       GenerateListType(MetaType as TListMetaType);
   end;
-
-  // Generate the base class for services
-  GenerateRestService;
 
   // Generate services
   for Service in FMetaClient.Services do
@@ -344,7 +345,7 @@ var
   TryFinally: TCodeTryFinallyStatement;
 begin
   Method := TCodeMemberMethod.Create;
-  GenerateJsonConverter.Members.Add(Method);
+  JsonConverterType.Members.Add(Method);
   Method.Name := ArrType.FromJsonValueFunctionName;
   Method.Visibility := mvPublic;
   Method.ReturnType := TCodeTypeReference.Create(ArrType.TypeName);
@@ -371,7 +372,7 @@ begin
 
   // Create the method to convert the string to list
   Method := TCodeMemberMethod.Create;
-  GenerateJsonConverter.Members.Add(Method);
+  JsonConverterType.Members.Add(Method);
   Method.Name := ArrType.FromJsonFunctionName;
   Method.Visibility := mvPublic;
   Method.ReturnType := TCodeTypeReference.Create(ArrType.TypeName);
@@ -394,7 +395,7 @@ var
   TryFinally: TCodeTryFinallyStatement;
 begin
   Method := TCodeMemberMethod.Create;
-  GenerateJsonConverter.Members.Add(Method);
+  JsonConverterType.Members.Add(Method);
   Method.Name := ArrType.ToJsonValueFunctionName;
   Method.Visibility := mvPublic;
   Method.ReturnType := TCodeTypeReference.Create(cJsonValue);
@@ -418,7 +419,7 @@ begin
 
   // Create the method to convert the List to string
   Method := TCodeMemberMethod.Create;
-  GenerateJsonConverter.Members.Add(Method);
+  JsonConverterType.Members.Add(Method);
   Method.Name := ArrType.ToJsonFunctionName;
   Method.Visibility := mvPublic;
   Method.ReturnType := TCodeTypeReference.Create('string');
@@ -563,7 +564,7 @@ var
 begin
   // Declare method to convert the TJSONValue to DTO
   Method := TCodeMemberMethod.Create;
-  GenerateJsonConverter.Members.Add(Method);
+  JsonConverterType.Members.Add(Method);
   Method.Name := ObjType.FromJsonValueFunctionName;
   Method.Visibility := mvPublic;
   Method.ReturnType := TCodeTypeReference.Create(ObjType.TypeName);
@@ -601,7 +602,7 @@ begin
 
   // Create the method to convert the string to DTO
   Method := TCodeMemberMethod.Create;
-  GenerateJsonConverter.Members.Add(Method);
+  JsonConverterType.Members.Add(Method);
   Method.Name := ObjType.FromJsonFunctionName;
   Method.Visibility := mvPublic;
   Method.ReturnType := TCodeTypeReference.Create(ObjType.TypeName);
@@ -625,7 +626,7 @@ var
   TryFinally: TCodeTryFinallyStatement;
 begin
   Method := TCodeMemberMethod.Create;
-  GenerateJsonConverter.Members.Add(Method);
+  JsonConverterType.Members.Add(Method);
   Method.Name := ListType.FromJsonValueFunctionName;
   Method.Visibility := mvPublic;
   Method.ReturnType := TCodeTypeReference.Create(ListType.TypeName);
@@ -657,7 +658,7 @@ begin
 
   // Create the method to convert the string to list
   Method := TCodeMemberMethod.Create;
-  GenerateJsonConverter.Members.Add(Method);
+  JsonConverterType.Members.Add(Method);
   Method.Name := ListType.FromJsonFunctionName;
   Method.Visibility := mvPublic;
   Method.ReturnType := TCodeTypeReference.Create(ListType.TypeName);
@@ -681,7 +682,7 @@ var
   TryFinally: TCodeTryFinallyStatement;
 begin
   Method := TCodeMemberMethod.Create;
-  GenerateJsonConverter.Members.Add(Method);
+  JsonConverterType.Members.Add(Method);
   Method.Name := ListType.ToJsonValueFunctionName;
   Method.Visibility := mvPublic;
   Method.ReturnType := TCodeTypeReference.Create(cJsonValue);
@@ -712,7 +713,7 @@ begin
 
   // Create the method to convert the List to string
   Method := TCodeMemberMethod.Create;
-  GenerateJsonConverter.Members.Add(Method);
+  JsonConverterType.Members.Add(Method);
   Method.Name := ListType.ToJsonFunctionName;
   Method.Visibility := mvPublic;
   Method.ReturnType := TCodeTypeReference.Create('string');
@@ -845,7 +846,7 @@ var
 begin
   // Declare method to convert the DTO to TJSONValue
   Method := TCodeMemberMethod.Create;
-  GenerateJsonConverter.Members.Add(Method);
+  JsonConverterType.Members.Add(Method);
   Method.Name := ObjType.ToJsonValueFunctionName;
   Method.Visibility := mvPublic;
   Method.ReturnType := TCodeTypeReference.Create(cJsonValue);
@@ -890,7 +891,7 @@ begin
 
   // Create the method to convert the DTO to string
   Method := TCodeMemberMethod.Create;
-  GenerateJsonConverter.Members.Add(Method);
+  JsonConverterType.Members.Add(Method);
   Method.Name := ObjType.ToJsonFunctionName;
   Method.Visibility := mvPublic;
   Method.ReturnType := TCodeTypeReference.Create('string');
@@ -904,22 +905,6 @@ begin
 
   TryFinally.Statements.AddSnippet('Result := JsonValueToJson(JValue)');
   TryFinally.FinallyStatements.AddSnippet('JValue.Free');
-end;
-
-function TOpenApiImporter.GenerateJsonConverter: TCodeTypeDeclaration;
-var
-  Converter: TCodeTypeDeclaration;
-begin
-  Converter := FJsonUnit.FindType('TJsonConverter');
-  if Converter <> nil then Exit(Converter);
-
-  Converter := TCodeTypeDeclaration.Create;
-  FJsonUnit._Types.Add(Converter);
-  Converter.IsClass := True;
-  Converter.BaseType := TCodeTypeReference.Create('TCustomJsonConverter');
-  Converter.Name := 'TJsonConverter';
-
-  Result := Converter;
 end;
 
 destructor TOpenApiImporter.Destroy;
@@ -947,7 +932,7 @@ begin
   Service := TCodeTypeDeclaration.Create;
   FClientUnit._Types.Add(Service);
   Service.IsClass := True;
-  Service.BaseType.BaseType := 'TRestService';
+  Service.BaseType.BaseType := RestServiceType.Name;
   Service.InterfaceTypes.Add(TCodeTypeReference.Create(InterfaceName));
   Service.Name := TypeName;
 
@@ -1044,6 +1029,35 @@ begin
     raise EOpenApiImportException.CreateFmt('Unsupported HTTP method: %s', [Method]);
 end;
 
+function TOpenApiImporter.JsonConverterType: TCodeTypeDeclaration;
+var
+  Converter: TCodeTypeDeclaration;
+  ConverterMethod: TCodeMemberMethod;
+begin
+  if FJsonConverterType = nil then
+  begin
+    Converter := FJsonUnit.FindType('TJsonConverter');
+    if Converter = nil then
+    begin
+      Converter := TCodeTypeDeclaration.Create;
+      FJsonUnit._Types.Add(Converter);
+      Converter.IsClass := True;
+      Converter.BaseType := TCodeTypeReference.Create('TCustomJsonConverter');
+      Converter.Name := 'TJsonConverter';
+
+      // Register the TJsonConverter method in TRestService
+      ConverterMethod := RestServiceType.AddFunction('CreateConverter', 'TCustomJsonConverter', mvProtected);
+      ConverterMethod.AddSnippet('Result := TJsonConverter.Create');
+      ConverterMethod.Directives := [mdOverride];
+      RestServiceType.AddFunction('Converter', 'TJsonConverter', mvProtected)
+        .AddSnippet('Result := TJsonConverter(inherited Converter)');
+    end;
+    FJsonConverterType := Converter;
+  end;
+
+  Result := FJsonConverterType;
+end;
+
 function TOpenApiImporter.GenerateMethodParam(CodeMethod: TCodeMemberMethod; MetaParam: TMetaParam): TCodeParameterDeclaration;
 begin
   Result := CodeMethod.AddParameter(MetaParam.CodeName, MetaParam.ParamType.TypeName);
@@ -1054,25 +1068,6 @@ begin
     CodeMethod.Comments.Add(TCodeComment.Create(MetaParam.Description, TCommentStyle.csDocumentation));
     CodeMethod.Comments.Add(TCodeComment.Create('</param>', TCommentStyle.csDocumentation));
   end;
-end;
-
-procedure TOpenApiImporter.GenerateRestService;
-var
-  CodeType: TCodeTypeDeclaration;
-  ConverterMethod: TCodeMemberMethod;
-begin
-  CodeType := TCodeTypeDeclaration.Create;
-  FClientUnit._Types.Add(CodeType);
-  CodeType.Name := 'TRestService';
-  CodeType.IsClass := True;
-  CodeType.BaseType := TCodeTypeReference.Create('TCustomRestService');
-
-  ConverterMethod := CodeType.AddFunction('CreateConverter', 'TCustomJsonConverter', mvProtected);
-  ConverterMethod.AddSnippet('Result := TJsonConverter.Create');
-  ConverterMethod.Directives := [mdOverride];
-
-  CodeType.AddFunction('Converter', 'TJsonConverter', mvProtected)
-    .AddSnippet('Result := TJsonConverter(inherited Converter)');
 end;
 
 procedure TOpenApiImporter.RecreateCodeUnits;
@@ -1086,6 +1081,22 @@ begin
 
   FJsonUnit := TCodeUnit.Create;
   FJsonUnit.Name := Options.ClientName + 'Json';
+end;
+
+function TOpenApiImporter.RestServiceType: TCodeTypeDeclaration;
+var
+  CodeType: TCodeTypeDeclaration;
+begin
+  if FRestServiceType = nil then
+  begin
+    CodeType := TCodeTypeDeclaration.Create;
+    FClientUnit._Types.Add(CodeType);
+    CodeType.Name := 'TRestService';
+    CodeType.IsClass := True;
+    CodeType.BaseType := TCodeTypeReference.Create('TCustomRestService');
+    FRestServiceType := CodeType;
+  end;
+  Result := FRestServiceType;
 end;
 
 end.
