@@ -36,7 +36,7 @@ type
     /// <remarks>
     /// Update an existing pet by Id
     /// </remarks>
-    procedure UpdatePet(Body: TPet);
+    function UpdatePet(Body: TPet): TPet;
     /// <summary>
     /// Add a new pet to the store
     /// </summary>
@@ -46,7 +46,7 @@ type
     /// <remarks>
     /// Add a new pet to the store
     /// </remarks>
-    procedure AddPet(Body: TPet);
+    function AddPet(Body: TPet): TPet;
     /// <summary>
     /// Finds Pets by status
     /// </summary>
@@ -56,7 +56,7 @@ type
     /// <remarks>
     /// Multiple status values can be provided with comma separated strings
     /// </remarks>
-    procedure FindPetsByStatus(Status: string);
+    function FindPetsByStatus(Status: string): TPetList;
     /// <summary>
     /// Finds Pets by tags
     /// </summary>
@@ -66,7 +66,7 @@ type
     /// <remarks>
     /// Multiple tags can be provided with comma separated strings. Use tag1, tag2, tag3 for testing.
     /// </remarks>
-    procedure FindPetsByTags(Tags: stringArray);
+    function FindPetsByTags(Tags: stringArray): TPetList;
     /// <summary>
     /// Find pet by ID
     /// </summary>
@@ -76,7 +76,7 @@ type
     /// <remarks>
     /// Returns a single pet
     /// </remarks>
-    procedure GetPetById(PetId: Int64);
+    function GetPetById(PetId: Int64): TPet;
     /// <summary>
     /// Updates a pet in the store with form data
     /// </summary>
@@ -104,23 +104,23 @@ type
     /// <param name="Body">
     /// Update an existent pet in the store
     /// </param>
-    procedure UpdatePet(Body: TPet);
+    function UpdatePet(Body: TPet): TPet;
     /// <param name="Body">
     /// Create a new pet in the store
     /// </param>
-    procedure AddPet(Body: TPet);
+    function AddPet(Body: TPet): TPet;
     /// <param name="Status">
     /// Status values that need to be considered for filter
     /// </param>
-    procedure FindPetsByStatus(Status: string);
+    function FindPetsByStatus(Status: string): TPetList;
     /// <param name="Tags">
     /// Tags to filter by
     /// </param>
-    procedure FindPetsByTags(Tags: stringArray);
+    function FindPetsByTags(Tags: stringArray): TPetList;
     /// <param name="PetId">
     /// ID of pet to return
     /// </param>
-    procedure GetPetById(PetId: Int64);
+    function GetPetById(PetId: Int64): TPet;
     /// <param name="PetId">
     /// ID of pet that needs to be updated
     /// </param>
@@ -148,14 +148,14 @@ type
     /// <remarks>
     /// Returns a map of status codes to quantities
     /// </remarks>
-    procedure GetInventory;
+    function GetInventory: TGetInventoryOutput;
     /// <summary>
     /// Place an order for a pet
     /// </summary>
     /// <remarks>
     /// Place a new order in the store
     /// </remarks>
-    procedure PlaceOrder(Body: TOrder);
+    function PlaceOrder(Body: TOrder): TOrder;
     /// <summary>
     /// Find purchase order by ID
     /// </summary>
@@ -165,7 +165,7 @@ type
     /// <remarks>
     /// For valid response try integer IDs with value <= 5 or > 10. Other values will generate exceptions.
     /// </remarks>
-    procedure GetOrderById(OrderId: Int64);
+    function GetOrderById(OrderId: Int64): TOrder;
     /// <summary>
     /// Delete purchase order by ID
     /// </summary>
@@ -180,12 +180,12 @@ type
   
   TStoreService = class(TRestService, IStoreService)
   public
-    procedure GetInventory;
-    procedure PlaceOrder(Body: TOrder);
+    function GetInventory: TGetInventoryOutput;
+    function PlaceOrder(Body: TOrder): TOrder;
     /// <param name="OrderId">
     /// ID of order that needs to be fetched
     /// </param>
-    procedure GetOrderById(OrderId: Int64);
+    function GetOrderById(OrderId: Int64): TOrder;
     /// <param name="OrderId">
     /// ID of the order that needs to be deleted
     /// </param>
@@ -206,14 +206,14 @@ type
     /// <remarks>
     /// This can only be done by the logged in user.
     /// </remarks>
-    procedure CreateUser(Body: TUser);
+    function CreateUser(Body: TUser): TUser;
     /// <summary>
     /// Creates list of users with given input array
     /// </summary>
     /// <remarks>
     /// Creates list of users with given input array
     /// </remarks>
-    procedure CreateUsersWithListInput(Body: TUserList);
+    function CreateUsersWithListInput(Body: TUserList): TUser;
     /// <summary>
     /// Logs user into the system
     /// </summary>
@@ -223,7 +223,7 @@ type
     /// <param name="Password">
     /// The password for login in clear text
     /// </param>
-    procedure LoginUser(Username: string; Password: string);
+    function LoginUser(Username: string; Password: string): string;
     /// <summary>
     /// Logs out current logged in user session
     /// </summary>
@@ -234,7 +234,7 @@ type
     /// <param name="Username">
     /// The name that needs to be fetched. Use user1 for testing. 
     /// </param>
-    procedure GetUserByName(Username: string);
+    function GetUserByName(Username: string): TUser;
     /// <summary>
     /// Update user
     /// </summary>
@@ -265,20 +265,20 @@ type
     /// <param name="Body">
     /// Created user object
     /// </param>
-    procedure CreateUser(Body: TUser);
-    procedure CreateUsersWithListInput(Body: TUserList);
+    function CreateUser(Body: TUser): TUser;
+    function CreateUsersWithListInput(Body: TUserList): TUser;
     /// <param name="Username">
     /// The user name for login
     /// </param>
     /// <param name="Password">
     /// The password for login in clear text
     /// </param>
-    procedure LoginUser(Username: string; Password: string);
+    function LoginUser(Username: string; Password: string): string;
     procedure LogoutUser;
     /// <param name="Username">
     /// The name that needs to be fetched. Use user1 for testing. 
     /// </param>
-    procedure GetUserByName(Username: string);
+    function GetUserByName(Username: string): TUser;
     /// <param name="Username">
     /// name that need to be deleted
     /// </param>
@@ -336,7 +336,7 @@ end;
 
 { TPetService }
 
-procedure TPetService.UpdatePet(Body: TPet);
+function TPetService.UpdatePet(Body: TPet): TPet;
 var
   Request: IRestRequest;
   Response: IRestResponse;
@@ -345,9 +345,10 @@ begin
   Request.AddBody(Converter.TPetToJson(Body));
   Response := Request.Execute;
   CheckError(Response);
+  Result := Converter.TPetFromJson(Response.ContentAsString);
 end;
 
-procedure TPetService.AddPet(Body: TPet);
+function TPetService.AddPet(Body: TPet): TPet;
 var
   Request: IRestRequest;
   Response: IRestResponse;
@@ -356,9 +357,10 @@ begin
   Request.AddBody(Converter.TPetToJson(Body));
   Response := Request.Execute;
   CheckError(Response);
+  Result := Converter.TPetFromJson(Response.ContentAsString);
 end;
 
-procedure TPetService.FindPetsByStatus(Status: string);
+function TPetService.FindPetsByStatus(Status: string): TPetList;
 var
   Request: IRestRequest;
   Response: IRestResponse;
@@ -367,9 +369,10 @@ begin
   Request.AddQueryParam('status', Status);
   Response := Request.Execute;
   CheckError(Response);
+  Result := Converter.TPetListFromJson(Response.ContentAsString);
 end;
 
-procedure TPetService.FindPetsByTags(Tags: stringArray);
+function TPetService.FindPetsByTags(Tags: stringArray): TPetList;
 var
   Request: IRestRequest;
   I: Integer;
@@ -380,9 +383,10 @@ begin
     Request.AddQueryParam('tags', Tags[I]);
   Response := Request.Execute;
   CheckError(Response);
+  Result := Converter.TPetListFromJson(Response.ContentAsString);
 end;
 
-procedure TPetService.GetPetById(PetId: Int64);
+function TPetService.GetPetById(PetId: Int64): TPet;
 var
   Request: IRestRequest;
   Response: IRestResponse;
@@ -391,6 +395,7 @@ begin
   Request.AddUrlParam('petId', IntToStr(PetId));
   Response := Request.Execute;
   CheckError(Response);
+  Result := Converter.TPetFromJson(Response.ContentAsString);
 end;
 
 procedure TPetService.UpdatePetWithForm(PetId: Int64; Name: string; Status: string);
@@ -420,7 +425,7 @@ end;
 
 { TStoreService }
 
-procedure TStoreService.GetInventory;
+function TStoreService.GetInventory: TGetInventoryOutput;
 var
   Request: IRestRequest;
   Response: IRestResponse;
@@ -428,9 +433,10 @@ begin
   Request := CreateRequest('/store/inventory', 'GET');
   Response := Request.Execute;
   CheckError(Response);
+  Result := Converter.TGetInventoryOutputFromJson(Response.ContentAsString);
 end;
 
-procedure TStoreService.PlaceOrder(Body: TOrder);
+function TStoreService.PlaceOrder(Body: TOrder): TOrder;
 var
   Request: IRestRequest;
   Response: IRestResponse;
@@ -439,9 +445,10 @@ begin
   Request.AddBody(Converter.TOrderToJson(Body));
   Response := Request.Execute;
   CheckError(Response);
+  Result := Converter.TOrderFromJson(Response.ContentAsString);
 end;
 
-procedure TStoreService.GetOrderById(OrderId: Int64);
+function TStoreService.GetOrderById(OrderId: Int64): TOrder;
 var
   Request: IRestRequest;
   Response: IRestResponse;
@@ -450,6 +457,7 @@ begin
   Request.AddUrlParam('orderId', IntToStr(OrderId));
   Response := Request.Execute;
   CheckError(Response);
+  Result := Converter.TOrderFromJson(Response.ContentAsString);
 end;
 
 procedure TStoreService.DeleteOrder(OrderId: Int64);
@@ -465,7 +473,7 @@ end;
 
 { TUserService }
 
-procedure TUserService.CreateUser(Body: TUser);
+function TUserService.CreateUser(Body: TUser): TUser;
 var
   Request: IRestRequest;
   Response: IRestResponse;
@@ -474,9 +482,10 @@ begin
   Request.AddBody(Converter.TUserToJson(Body));
   Response := Request.Execute;
   CheckError(Response);
+  Result := Converter.TUserFromJson(Response.ContentAsString);
 end;
 
-procedure TUserService.CreateUsersWithListInput(Body: TUserList);
+function TUserService.CreateUsersWithListInput(Body: TUserList): TUser;
 var
   Request: IRestRequest;
   Response: IRestResponse;
@@ -485,9 +494,10 @@ begin
   Request.AddBody(Converter.TUserListToJson(Body));
   Response := Request.Execute;
   CheckError(Response);
+  Result := Converter.TUserFromJson(Response.ContentAsString);
 end;
 
-procedure TUserService.LoginUser(Username: string; Password: string);
+function TUserService.LoginUser(Username: string; Password: string): string;
 var
   Request: IRestRequest;
   Response: IRestResponse;
@@ -497,6 +507,7 @@ begin
   Request.AddQueryParam('password', Password);
   Response := Request.Execute;
   CheckError(Response);
+  Result := Converter.stringFromJson(Response.ContentAsString);
 end;
 
 procedure TUserService.LogoutUser;
@@ -509,7 +520,7 @@ begin
   CheckError(Response);
 end;
 
-procedure TUserService.GetUserByName(Username: string);
+function TUserService.GetUserByName(Username: string): TUser;
 var
   Request: IRestRequest;
   Response: IRestResponse;
@@ -518,6 +529,7 @@ begin
   Request.AddUrlParam('username', Username);
   Response := Request.Execute;
   CheckError(Response);
+  Result := Converter.TUserFromJson(Response.ContentAsString);
 end;
 
 procedure TUserService.UpdateUser(Username: string; Body: TUser);

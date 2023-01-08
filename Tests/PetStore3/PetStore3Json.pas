@@ -55,10 +55,18 @@ type
     function TApiResponseToJson(Source: TApiResponse): string;
     function TApiResponseFromJsonValue(Source: TJSONValue): TApiResponse;
     function TApiResponseFromJson(Source: string): TApiResponse;
+    function TPetListToJsonValue(Source: TPetList): TJSONValue;
+    function TPetListToJson(Source: TPetList): string;
+    function TPetListFromJsonValue(Source: TJSONValue): TPetList;
+    function TPetListFromJson(Source: string): TPetList;
     function stringArrayToJsonValue(Source: stringArray): TJSONValue;
     function stringArrayToJson(Source: stringArray): string;
     function stringArrayFromJsonValue(Source: TJSONValue): stringArray;
     function stringArrayFromJson(Source: string): stringArray;
+    function TGetInventoryOutputToJsonValue(Source: TGetInventoryOutput): TJSONValue;
+    function TGetInventoryOutputToJson(Source: TGetInventoryOutput): string;
+    function TGetInventoryOutputFromJsonValue(Source: TJSONValue): TGetInventoryOutput;
+    function TGetInventoryOutputFromJson(Source: string): TGetInventoryOutput;
     function TUserListToJsonValue(Source: TUserList): TJSONValue;
     function TUserListToJson(Source: TUserList): string;
     function TUserListFromJsonValue(Source: TJSONValue): TUserList;
@@ -837,6 +845,68 @@ begin
   end;
 end;
 
+function TJsonConverter.TPetListToJsonValue(Source: TPetList): TJSONValue;
+var
+  Index: Integer;
+begin
+  if not Assigned(Source) then
+  begin
+    Result := Json.CreateNull;
+    Exit;
+  end;
+  Result := Json.CreateArray;
+  try
+    for Index := 0 to Source.Count - 1 do
+      Json.ArrayAdd(Result, Self.TPetToJsonValue(Source[Index]));
+  except
+    Result.Free;
+    raise;
+  end;
+end;
+
+function TJsonConverter.TPetListToJson(Source: TPetList): string;
+var
+  JValue: TJSONValue;
+begin
+  JValue := TPetListToJsonValue(Source);
+  try
+    Result := JsonValueToJson(JValue);
+  finally
+    JValue.Free;
+  end;
+end;
+
+function TJsonConverter.TPetListFromJsonValue(Source: TJSONValue): TPetList;
+var
+  Index: Integer;
+begin
+  if not Json.IsArray(Source) then
+  begin
+    Result := nil;
+    Exit;
+  end;
+  Result := TPetList.Create;
+  try
+    for Index := 0 to Json.ArrayLength(Source) - 1 do
+      Result.Add(Self.TPetFromJsonValue(Json.ArrayGet(Source, Index)));
+  except
+    Result.Free;
+    raise;
+  end;
+end;
+
+function TJsonConverter.TPetListFromJson(Source: string): TPetList;
+var
+  JValue: TJSONValue;
+begin
+  JValue := JsonToJsonValue(Source);
+  try
+    Result := TPetListFromJsonValue(JValue);
+  finally
+    JValue.Free;
+  end;
+end;
+
 function TJsonConverter.stringArrayToJsonValue(Source: stringArray): TJSONValue;
 var
   Index: Integer;
@@ -884,6 +954,60 @@ begin
   JValue := JsonToJsonValue(Source);
   try
     Result := stringArrayFromJsonValue(JValue);
+  finally
+    JValue.Free;
+  end;
+end;
+
+function TJsonConverter.TGetInventoryOutputToJsonValue(Source: TGetInventoryOutput): TJSONValue;
+begin
+  if not Assigned(Source) then
+  begin
+    Result := Json.CreateNull;
+    Exit;
+  end;
+  Result := Json.CreateObject;
+  try
+  except
+    Result.Free;
+    raise;
+  end;
+end;
+
+function TJsonConverter.TGetInventoryOutputToJson(Source: TGetInventoryOutput): string;
+var
+  JValue: TJSONValue;
+begin
+  JValue := TGetInventoryOutputToJsonValue(Source);
+  try
+    Result := JsonValueToJson(JValue);
+  finally
+    JValue.Free;
+  end;
+end;
+
+function TJsonConverter.TGetInventoryOutputFromJsonValue(Source: TJSONValue): TGetInventoryOutput;
+begin
+  if not Json.IsObject(Source) then
+  begin
+    Result := nil;
+    Exit;
+  end;
+  Result := TGetInventoryOutput.Create;
+  try
+  except
+    Result.Free;
+    raise;
+  end;
+end;
+
+function TJsonConverter.TGetInventoryOutputFromJson(Source: string): TGetInventoryOutput;
+var
+  JValue: TJSONValue;
+begin
+  JValue := JsonToJsonValue(Source);
+  try
+    Result := TGetInventoryOutputFromJsonValue(JValue);
   finally
     JValue.Free;
   end;

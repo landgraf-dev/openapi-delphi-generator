@@ -22,6 +22,8 @@ type
   TTagList = class;
   TPet = class;
   TApiResponse = class;
+  TPetList = class;
+  TGetInventoryOutput = class;
   TUserList = class;
   
   TOrder = class
@@ -242,6 +244,12 @@ type
     property &TypeHasValue: Boolean read FTypeHasValue write FTypeHasValue;
     property Message: string read FMessage write SetMessage;
     property MessageHasValue: Boolean read FMessageHasValue write FMessageHasValue;
+  end;
+  
+  TPetList = class(TObjectList<TPet>)
+  end;
+  
+  TGetInventoryOutput = class
   end;
   
   TUserList = class(TObjectList<TUser>)

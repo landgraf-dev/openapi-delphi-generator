@@ -124,27 +124,33 @@ begin
         raise EOpenApiAnalyzerException.CreateFmt('Request body is present in method "%s" but does not consume JSON', [Method.UrlPath]);
     end;
 
+    ProducesJson := False;
     ResponseType := nil;
-//    for ResponseItem in Operation.Responses do
-//      if ((ResponseItem.Key = 'default') or (StrToInt(ResponseItem.Key) < 300)) and Assigned(ResponseItem.Value.Schema) then
-//      begin
-//        if Options.XDataService then
-//          ListType := TListType.ltArray
-//        else
-//          ListType := TListType.ltAuto;
-//        TargetResponseType := MetaTypeFromSchema(ResponseItem.Value.Schema, Method.CodeName + 'Output', ListType);
-//        if ResponseType = nil then
-//          ResponseType := TargetResponseType
-//        else
-//        if ResponseType.TypeName <> TargetResponseType.TypeName then
-//          raise EOpenApiAnalyzerException.CreateFmt('Ambiguous response types: %s and %s', [ResponseType.TypeName, TargetResponseType.TypeName]);
-//      end;
-//    Method.ReturnType := ResponseType;
+    for ResponseItem in Operation.Responses do
+      if ((ResponseItem.Key = 'default') or (StrToInt(ResponseItem.Key) < 300)) and Assigned(ResponseItem.Value.Content) then
+      begin
+        for ContentPair in ResponseItem.Value.Content do
+          if SameText(MimeTypeJson, ContentPair.Key) then
+            begin
+              ProducesJson := True;
+
+              if Options.XDataService then
+                ListType := TListType.ltArray
+              else
+                ListType := TListType.ltAuto;
+
+              TargetResponseType := MetaTypeFromSchema(ContentPair.Value.Schema, Method.CodeName + 'Output', ListType);
+              if ResponseType = nil then
+                ResponseType := TargetResponseType
+              else
+              if ResponseType.TypeName <> TargetResponseType.TypeName then
+                raise EOpenApiAnalyzerException.CreateFmt('Ambiguous response types: %s and %s', [ResponseType.TypeName, TargetResponseType.TypeName]);
+            end;
+      end;
+    Method.ReturnType := ResponseType;
     if (ResponseType <> nil) and not ResponseType.IsBinary then
-      if ProducesJson then
-        Method.Produces := MimeTypeJson
-      else
-        raise EOpenApiAnalyzerException.Create('Method returns data be method does not produce JSON');
+      if not ProducesJson then
+        raise EOpenApiAnalyzerException.CreateFmt('Response body is present in method "%s" but does not produce JSON', [Method.UrlPath]);
     Result := True;
   except
     on E: EOpenApiAnalyzerException do
