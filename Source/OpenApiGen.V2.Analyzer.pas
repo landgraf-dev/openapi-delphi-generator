@@ -91,7 +91,7 @@ begin
         if ConsumesJson then
           Method.Consumes := MimeTypeJson
         else
-          raise EOpenApiAnalyzerException.CreateFmt('Body parameter %s is present by method does not consume JSON', [Param.Name]);
+          raise EOpenApiAnalyzerException.CreateFmt('Body parameter %s is present but method does not consume JSON', [Param.Name]);
 
       MetaParam := TMetaParam.Create;
       Method.Params.Add(MetaParam);

@@ -80,28 +80,49 @@ var
   ListType: TListType;
   ConsumesJson: Boolean;
   ProducesJson: Boolean;
+  ContentPair: TPair<string, TMediaType>;
+  BodyParamName: string;
 begin
+  if (Operation.Servers <> nil) and (Operation.Servers.Count > 1) then
+    raise Exception.Create('Multiple servers are not yet supported');
+
   Result := False;
   try
-//    ConsumesJson := Operation.Consumes.Contains(MimeTypeJson);
-//    ProducesJson := Operation.Produces.Contains(MimeTypeJson);
-
     Method.HttpMethod := HttpMethod;
     Method.UrlPath := Path;
 
-//    for Param in Operation.Parameters do
-//    begin
-//      if Param.InBody then
-//        if ConsumesJson then
-//          Method.Consumes := MimeTypeJson
-//        else
-//          raise EOpenApiAnalyzerException.CreateFmt('Body parameter %s is present by method does not consume JSON', [Param.Name]);
-//
-//      MetaParam := TMetaParam.Create;
-//      Method.Params.Add(MetaParam);
-//      MetaParam.Description := Param.Description;
-//      BuildMetaParam(MetaParam, Param, Method.CodeName);
-//    end;
+    if Operation.Parameters <> nil then
+      for Param in Operation.Parameters do
+      begin
+        MetaParam := TMetaParam.Create;
+        Method.Params.Add(MetaParam);
+        MetaParam.Description := Param.Description;
+        BuildMetaParam(MetaParam, Param, Method.CodeName);
+      end;
+
+    if Operation.RequestBody <> nil then
+    begin
+      ConsumesJson := False;
+      if Operation.RequestBody.Content <> nil then
+        for ContentPair in Operation.RequestBody.Content do
+          if SameText(MimeTypeJson, ContentPair.Key) then
+          begin
+            ConsumesJson := True;
+
+            // Add JSON body param
+            MetaParam := TMetaParam.Create;
+            Method.Params.Add(MetaParam);
+            MetaParam.Description := Operation.RequestBody.Description;
+
+            BodyParamName := 'Body';
+            MetaParam.RestName := BodyParamName;
+            MetaParam.CodeName := ProcessNaming(MetaParam.RestName, Options.ServiceOptions.ParamNaming);
+            MetaParam.ParamType := MetaTypeFromSchema(ContentPair.Value.Schema, Method.CodeName + 'Input', TListType.ltAuto);
+            MetaParam.Location := TParamLocation.plBody;
+          end;
+      if not ConsumesJson then
+        raise EOpenApiAnalyzerException.CreateFmt('Request body is present in method "%s" but does not consume JSON', [Method.UrlPath]);
+    end;
 
     ResponseType := nil;
 //    for ResponseItem in Operation.Responses do
@@ -139,37 +160,27 @@ end;
 
 procedure TOpenApiAnalyzer.BuildMetaParam(MetaParam: TMetaParam; Param: TParameter; const MethodName: string);
 begin
-//  MetaParam.RestName := Param.Name;
-//  MetaParam.CodeName := ProcessNaming(Param.Name, Options.ServiceOptions.ParamNaming);
-//  case Param.&In of
-//    Body:
-//      begin
-//        MetaParam.ParamType := MetaTypeFromSchema(Param.Schema, MethodName + 'Input', TListType.ltAuto);
-//        MetaParam.Location := TParamLocation.plBody;
-//      end;
-//    Query:
-//      begin
-//        MetaParam.ParamType := MetaTypeFromSchema(Param.Schema, MethodName + Param.Name, TListType.ltAuto);
-//        MetaParam.Location := TParamLocation.plQuery;
-//      end;
-//    Path:
-//      begin
-//        MetaParam.ParamType := MetaTypeFromSchema(Param.Schema, MethodName + Param.Name, TListType.ltAuto);
-//        MetaParam.Location := TParamLocation.plUrl;
-//      end;
-//    FormData:
-//      begin
-//        MetaParam.ParamType := MetaTypeFromSchema(Param.Schema, MethodName + Param.Name, TListType.ltAuto);
-//        MetaParam.Location := TParamLocation.plForm;
-//      end;
-//    Header:
-//      begin
-//        MetaParam.ParamType := MetaTypeFromSchema(Param.Schema, MethodName + Param.Name, TListType.ltAuto);
-//        MetaParam.Location := TParamLocation.plHeader;
-//      end;
-//  else
-//    raise EOpenApiAnalyzerException.CreateFmt('Unsupported parameter type: %s', [GetEnumName(TypeInfo(TLocation), Ord(Param.&In))]);
-//  end;
+  MetaParam.RestName := Param.Name;
+  MetaParam.CodeName := ProcessNaming(Param.Name, Options.ServiceOptions.ParamNaming);
+  case Param.&In of
+    Query:
+      begin
+        MetaParam.ParamType := MetaTypeFromSchema(Param.Schema, MethodName + Param.Name, TListType.ltAuto);
+        MetaParam.Location := TParamLocation.plQuery;
+      end;
+    Path:
+      begin
+        MetaParam.ParamType := MetaTypeFromSchema(Param.Schema, MethodName + Param.Name, TListType.ltAuto);
+        MetaParam.Location := TParamLocation.plUrl;
+      end;
+    Header:
+      begin
+        MetaParam.ParamType := MetaTypeFromSchema(Param.Schema, MethodName + Param.Name, TListType.ltAuto);
+        MetaParam.Location := TParamLocation.plHeader;
+      end;
+  else
+    raise EOpenApiAnalyzerException.CreateFmt('Unsupported parameter type: %s', [GetEnumName(TypeInfo(TLocation), Ord(Param.&In))]);
+  end;
 end;
 
 procedure TOpenApiAnalyzer.DoSolveServiceOperation(var ServiceName, ServiceDescription, OperationName: string; const Path: string;
@@ -216,7 +227,7 @@ begin
   if Document.Servers <> nil then
   begin
     if Document.Servers.Count > 1 then
-      raise EOpenApiAnalyzerException.Create('Multiple servers are not supported');
+      raise Exception.Create('Multiple servers are not yet supported');
 
     Server := Document.Servers[0];
     Result := Server.Url;
@@ -229,7 +240,7 @@ begin
   if Pos('://', Result) = 0 then
   begin
     if Options.DocumentUrl = '' then
-      raise EOpenApiAnalyzerException.Create('Cannot determine the URL of the API spe, please provide it using DocumentUrl param');
+      raise Exception.Create('Cannot determine the URL of the API spe, please provide it using DocumentUrl param');
     Result := Options.DocumentUrl + Result;
   end;
 end;
@@ -240,7 +251,7 @@ var
   ReferencedSchema: TJsonSchema;
 begin
   if not Document.Components.Schemas.TryGetValue(RefSchema.SchemaName, ReferencedSchema) then
-    raise EOpenApiAnalyzerException.CreateFmt('Reference not in schema "%s"', [RefSchema.Ref]);
+    raise Exception.CreateFmt('Could not solve reference "%s"', [RefSchema.Ref]);
 
   // if it's object, then just reference the type. Otherwise, use the referenced type inline
   if ReferencedSchema is TObjectSchema then
@@ -298,7 +309,7 @@ end;
 procedure TOpenApiAnalyzer.ProcessPathItem(const Path: string; PathItem: TPathItem);
 begin
   if (Document.Servers <> nil) and (Document.Servers.Count > 1) then
-    raise EOpenApiAnalyzerException.Create('Multiple servers are not supported.');
+    raise Exception.Create('Multiple servers are not yet supported');
 
   ProcessOperation(Path, PathItem, PathItem.Get, 'GET');
   ProcessOperation(Path, PathItem, PathItem.Put, 'PUT');

@@ -55,6 +55,14 @@ type
     function TApiResponseToJson(Source: TApiResponse): string;
     function TApiResponseFromJsonValue(Source: TJSONValue): TApiResponse;
     function TApiResponseFromJson(Source: string): TApiResponse;
+    function stringArrayToJsonValue(Source: stringArray): TJSONValue;
+    function stringArrayToJson(Source: stringArray): string;
+    function stringArrayFromJsonValue(Source: TJSONValue): stringArray;
+    function stringArrayFromJson(Source: string): stringArray;
+    function TUserListToJsonValue(Source: TUserList): TJSONValue;
+    function TUserListToJson(Source: TUserList): string;
+    function TUserListFromJsonValue(Source: TJSONValue): TUserList;
+    function TUserListFromJson(Source: string): TUserList;
   end;
   
 implementation
@@ -824,6 +832,120 @@ begin
   JValue := JsonToJsonValue(Source);
   try
     Result := TApiResponseFromJsonValue(JValue);
+  finally
+    JValue.Free;
+  end;
+end;
+
+function TJsonConverter.stringArrayToJsonValue(Source: stringArray): TJSONValue;
+var
+  Index: Integer;
+begin
+  Result := Json.CreateArray;
+  try
+    for Index := 0 to Length(Source) - 1 do
+      Json.ArrayAdd(Result, Self.stringToJsonValue(Source[Index]));
+  except
+    Result.Free;
+    raise;
+  end;
+end;
+
+function TJsonConverter.stringArrayToJson(Source: stringArray): string;
+var
+  JValue: TJSONValue;
+begin
+  JValue := stringArrayToJsonValue(Source);
+  try
+    Result := JsonValueToJson(JValue);
+  finally
+    JValue.Free;
+  end;
+end;
+
+function TJsonConverter.stringArrayFromJsonValue(Source: TJSONValue): stringArray;
+var
+  Index: Integer;
+begin
+  if not Json.IsArray(Source) then
+  begin
+    SetLength(Result, 0);
+    Exit;
+  end;
+  SetLength(Result, Json.ArrayLength(Source));
+  for Index := 0 to Json.ArrayLength(Source) - 1 do
+    Result[Index] := Self.stringFromJsonValue(Json.ArrayGet(Source, Index));
+end;
+
+function TJsonConverter.stringArrayFromJson(Source: string): stringArray;
+var
+  JValue: TJSONValue;
+begin
+  JValue := JsonToJsonValue(Source);
+  try
+    Result := stringArrayFromJsonValue(JValue);
+  finally
+    JValue.Free;
+  end;
+end;
+
+function TJsonConverter.TUserListToJsonValue(Source: TUserList): TJSONValue;
+var
+  Index: Integer;
+begin
+  if not Assigned(Source) then
+  begin
+    Result := Json.CreateNull;
+    Exit;
+  end;
+  Result := Json.CreateArray;
+  try
+    for Index := 0 to Source.Count - 1 do
+      Json.ArrayAdd(Result, Self.TUserToJsonValue(Source[Index]));
+  except
+    Result.Free;
+    raise;
+  end;
+end;
+
+function TJsonConverter.TUserListToJson(Source: TUserList): string;
+var
+  JValue: TJSONValue;
+begin
+  JValue := TUserListToJsonValue(Source);
+  try
+    Result := JsonValueToJson(JValue);
+  finally
+    JValue.Free;
+  end;
+end;
+
+function TJsonConverter.TUserListFromJsonValue(Source: TJSONValue): TUserList;
+var
+  Index: Integer;
+begin
+  if not Json.IsArray(Source) then
+  begin
+    Result := nil;
+    Exit;
+  end;
+  Result := TUserList.Create;
+  try
+    for Index := 0 to Json.ArrayLength(Source) - 1 do
+      Result.Add(Self.TUserFromJsonValue(Json.ArrayGet(Source, Index)));
+  except
+    Result.Free;
+    raise;
+  end;
+end;
+
+function TJsonConverter.TUserListFromJson(Source: string): TUserList;
+var
+  JValue: TJSONValue;
+begin
+  JValue := JsonToJsonValue(Source);
+  try
+    Result := TUserListFromJsonValue(JValue);
   finally
     JValue.Free;
   end;

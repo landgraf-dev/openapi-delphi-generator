@@ -240,7 +240,6 @@ end;
 function TOpenApiCustomAnalyzer.MetaTypeFromReference(RefSchema: TReferenceSchema; const DefaultTypeName: string;
   ListType: TListType): IMetaType;
 begin
-
 end;
 
 function TOpenApiCustomAnalyzer.MetaTypeFromSchema(Schema: TJsonSchema; const DefaultTypeName: string;

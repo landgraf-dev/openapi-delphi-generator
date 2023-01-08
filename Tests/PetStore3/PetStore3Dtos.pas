@@ -9,6 +9,8 @@ uses
   SysUtils;
 
 type
+  stringArray = array of string;
+  
   TOrder = class;
   TAddress = class;
   TAddressList = class;
@@ -20,6 +22,7 @@ type
   TTagList = class;
   TPet = class;
   TApiResponse = class;
+  TUserList = class;
   
   TOrder = class
   private
@@ -239,6 +242,9 @@ type
     property &TypeHasValue: Boolean read FTypeHasValue write FTypeHasValue;
     property Message: string read FMessage write SetMessage;
     property MessageHasValue: Boolean read FMessageHasValue write FMessageHasValue;
+  end;
+  
+  TUserList = class(TObjectList<TUser>)
   end;
   
 implementation
