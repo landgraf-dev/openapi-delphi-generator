@@ -343,6 +343,8 @@ var
 begin
   Request := CreateRequest('/pet', 'PUT');
   Request.AddBody(Converter.TPetToJson(Body));
+  Request.AddHeader('Content-Type', 'application/json');
+  Request.AddHeader('Accept', 'application/json');
   Response := Request.Execute;
   CheckError(Response);
   Result := Converter.TPetFromJson(Response.ContentAsString);
@@ -355,6 +357,8 @@ var
 begin
   Request := CreateRequest('/pet', 'POST');
   Request.AddBody(Converter.TPetToJson(Body));
+  Request.AddHeader('Content-Type', 'application/json');
+  Request.AddHeader('Accept', 'application/json');
   Response := Request.Execute;
   CheckError(Response);
   Result := Converter.TPetFromJson(Response.ContentAsString);
@@ -367,6 +371,7 @@ var
 begin
   Request := CreateRequest('/pet/findByStatus', 'GET');
   Request.AddQueryParam('status', Status);
+  Request.AddHeader('Accept', 'application/json');
   Response := Request.Execute;
   CheckError(Response);
   Result := Converter.TPetListFromJson(Response.ContentAsString);
@@ -381,6 +386,7 @@ begin
   Request := CreateRequest('/pet/findByTags', 'GET');
   for I := 0 to Length(Tags) - 1 do
     Request.AddQueryParam('tags', Tags[I]);
+  Request.AddHeader('Accept', 'application/json');
   Response := Request.Execute;
   CheckError(Response);
   Result := Converter.TPetListFromJson(Response.ContentAsString);
@@ -393,6 +399,7 @@ var
 begin
   Request := CreateRequest('/pet/{petId}', 'GET');
   Request.AddUrlParam('petId', IntToStr(PetId));
+  Request.AddHeader('Accept', 'application/json');
   Response := Request.Execute;
   CheckError(Response);
   Result := Converter.TPetFromJson(Response.ContentAsString);
@@ -431,6 +438,7 @@ var
   Response: IRestResponse;
 begin
   Request := CreateRequest('/store/inventory', 'GET');
+  Request.AddHeader('Accept', 'application/json');
   Response := Request.Execute;
   CheckError(Response);
   Result := Converter.TGetInventoryOutputFromJson(Response.ContentAsString);
@@ -443,6 +451,8 @@ var
 begin
   Request := CreateRequest('/store/order', 'POST');
   Request.AddBody(Converter.TOrderToJson(Body));
+  Request.AddHeader('Content-Type', 'application/json');
+  Request.AddHeader('Accept', 'application/json');
   Response := Request.Execute;
   CheckError(Response);
   Result := Converter.TOrderFromJson(Response.ContentAsString);
@@ -455,6 +465,7 @@ var
 begin
   Request := CreateRequest('/store/order/{orderId}', 'GET');
   Request.AddUrlParam('orderId', IntToStr(OrderId));
+  Request.AddHeader('Accept', 'application/json');
   Response := Request.Execute;
   CheckError(Response);
   Result := Converter.TOrderFromJson(Response.ContentAsString);
@@ -480,6 +491,8 @@ var
 begin
   Request := CreateRequest('/user', 'POST');
   Request.AddBody(Converter.TUserToJson(Body));
+  Request.AddHeader('Content-Type', 'application/json');
+  Request.AddHeader('Accept', 'application/json');
   Response := Request.Execute;
   CheckError(Response);
   Result := Converter.TUserFromJson(Response.ContentAsString);
@@ -492,6 +505,8 @@ var
 begin
   Request := CreateRequest('/user/createWithList', 'POST');
   Request.AddBody(Converter.TUserListToJson(Body));
+  Request.AddHeader('Content-Type', 'application/json');
+  Request.AddHeader('Accept', 'application/json');
   Response := Request.Execute;
   CheckError(Response);
   Result := Converter.TUserFromJson(Response.ContentAsString);
@@ -505,6 +520,7 @@ begin
   Request := CreateRequest('/user/login', 'GET');
   Request.AddQueryParam('username', Username);
   Request.AddQueryParam('password', Password);
+  Request.AddHeader('Accept', 'application/json');
   Response := Request.Execute;
   CheckError(Response);
   Result := Converter.stringFromJson(Response.ContentAsString);
@@ -527,6 +543,7 @@ var
 begin
   Request := CreateRequest('/user/{username}', 'GET');
   Request.AddUrlParam('username', Username);
+  Request.AddHeader('Accept', 'application/json');
   Response := Request.Execute;
   CheckError(Response);
   Result := Converter.TUserFromJson(Response.ContentAsString);
@@ -540,6 +557,7 @@ begin
   Request := CreateRequest('/user/{username}', 'PUT');
   Request.AddUrlParam('username', Username);
   Request.AddBody(Converter.TUserToJson(Body));
+  Request.AddHeader('Content-Type', 'application/json');
   Response := Request.Execute;
   CheckError(Response);
 end;

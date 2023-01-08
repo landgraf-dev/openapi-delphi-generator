@@ -120,7 +120,9 @@ begin
             MetaParam.ParamType := MetaTypeFromSchema(ContentPair.Value.Schema, Method.CodeName + 'Input', TListType.ltAuto);
             MetaParam.Location := TParamLocation.plBody;
           end;
-      if not ConsumesJson then
+      if ConsumesJson then
+        Method.Consumes := MimeTypeJson
+      else
         raise EOpenApiAnalyzerException.CreateFmt('Request body is present in method "%s" but does not consume JSON', [Method.UrlPath]);
     end;
 
@@ -149,7 +151,9 @@ begin
       end;
     Method.ReturnType := ResponseType;
     if (ResponseType <> nil) and not ResponseType.IsBinary then
-      if not ProducesJson then
+      if ProducesJson then
+        Method.Produces := MimeTypeJson
+      else
         raise EOpenApiAnalyzerException.CreateFmt('Response body is present in method "%s" but does not produce JSON', [Method.UrlPath]);
     Result := True;
   except
