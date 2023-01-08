@@ -101,6 +101,9 @@
         <DCCReference Include="S:\nuvem-fiscal\nuvemfiscal-sdk-delphi\Source\NuvemFiscalClient.pas"/>
         <DCCReference Include="S:\nuvem-fiscal\nuvemfiscal-sdk-delphi\Source\NuvemFiscalDtos.pas"/>
         <DCCReference Include="..\Dist\OpenApiUtils.pas"/>
+        <DCCReference Include="PetStore3\PetStore3Client.pas"/>
+        <DCCReference Include="PetStore3\PetStore3Dtos.pas"/>
+        <DCCReference Include="PetStore3\PetStore3Json.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

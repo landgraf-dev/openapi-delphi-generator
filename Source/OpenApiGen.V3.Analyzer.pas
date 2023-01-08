@@ -37,22 +37,30 @@ const
 
 implementation
 
+function ChooseStr(const S1, S2: string): string;
+begin
+  if S1 <> '' then
+    Result := S1
+  else
+    Result := S2;
+end;
+
 { TOpenApiAnalyzer }
 
 procedure TOpenApiAnalyzer.Analyze(ADocument: TOpenApiDocument);
 var
   Path: TPair<string, TPathItem>;
-  Definition: TPair<string, TJsonSchema>;
+  Schema: TPair<string, TJsonSchema>;
 begin
   FDocument := ADocument;
 
   // Build meta information
   MetaClient.Clear;
 
-//  for Definition in Document.Definitions do
-//    MetaTypeFromSchema(Definition.Value, Definition.Key, TListType.ltAuto);
-//  for Path in Document.Paths do
-//    ProcessPathItem(Path.Key, Path.Value);
+  for Schema in Document.Components.Schemas do
+    MetaTypeFromSchema(Schema.Value, Schema.Key, TListType.ltAuto);
+  for Path in Document.Paths do
+    ProcessPathItem(Path.Key, Path.Value);
 
   MetaClient.InterfaceName := Format('I%sClient', [Options.ClientName]);
   MetaClient.ClientClass := Format('T%sClient', [Options.ClientName]);
@@ -80,8 +88,6 @@ begin
 
     Method.HttpMethod := HttpMethod;
     Method.UrlPath := Path;
-//    Method.Summary := Operation.Summary;
-//    Method.Remarks := Operation.Description;
 
 //    for Param in Operation.Parameters do
 //    begin
@@ -230,12 +236,12 @@ function TOpenApiAnalyzer.MetaTypeFromReference(RefSchema: TReferenceSchema; con
 var
   ReferencedSchema: TJsonSchema;
 begin
-//  if not Document.Definitions.TryGetValue(RefSchema.DefinitionName, ReferencedSchema) then
-//    raise EOpenApiAnalyzerException.CreateFmt('Reference not in definition "%s"', [RefSchema.Ref]);
+  if not Document.Components.Schemas.TryGetValue(RefSchema.SchemaName, ReferencedSchema) then
+    raise EOpenApiAnalyzerException.CreateFmt('Reference not in schema "%s"', [RefSchema.Ref]);
 
   // if it's object, then just reference the type. Otherwise, use the referenced type inline
   if ReferencedSchema is TObjectSchema then
-    Result := MetaTypeFromObject(RefSchema.DefinitionName, TObjectSchema(ReferencedSchema))
+    Result := MetaTypeFromObject(RefSchema.SchemaName, TObjectSchema(ReferencedSchema))
   else
     Result := MetaTypeFromSchema(ReferencedSchema, DefaultTypeName, ListType);
 end;
@@ -253,6 +259,8 @@ var
   ServiceDescription: string;
 begin
   if Operation = nil then Exit;
+
+//  PathItem.Servers;
 
   // Service Mode
   DoSolveServiceOperation(ServiceName, ServiceDescription, OperationName, Path, PathItem, Operation);
@@ -280,18 +288,22 @@ begin
   if MetaMethod.CodeName = '' then
     MetaMethod.Ignore := True;
   BuildMetaMethod(MetaMethod, Path, Operation, HttpMethod);
+
+  MetaMethod.Summary := ChooseStr(Operation.Summary, PathItem.Summary);
+  MetaMethod.Remarks := ChooseStr(Operation.Description, PathItem.Description);
 end;
 
 
 procedure TOpenApiAnalyzer.ProcessPathItem(const Path: string; PathItem: TPathItem);
 begin
-//  ProcessOperation(Path, PathItem, PathItem.Get, 'GET');
-//  ProcessOperation(Path, PathItem, PathItem.Put, 'PUT');
-//  ProcessOperation(Path, PathItem, PathItem.Post, 'POST');
-//  ProcessOperation(Path, PathItem, PathItem.Delete, 'DELETE');
-//  ProcessOperation(Path, PathItem, PathItem.Patch, 'PATCH');
-//  ProcessOperation(Path, PathItem, PathItem.Options, 'OPTIONS');
-//  ProcessOperation(Path, PathItem, PathItem.Head, 'HEAD');
+  ProcessOperation(Path, PathItem, PathItem.Get, 'GET');
+  ProcessOperation(Path, PathItem, PathItem.Put, 'PUT');
+  ProcessOperation(Path, PathItem, PathItem.Post, 'POST');
+  ProcessOperation(Path, PathItem, PathItem.Delete, 'DELETE');
+  ProcessOperation(Path, PathItem, PathItem.Patch, 'PATCH');
+  ProcessOperation(Path, PathItem, PathItem.Options, 'OPTIONS');
+  ProcessOperation(Path, PathItem, PathItem.Head, 'HEAD');
+  ProcessOperation(Path, PathItem, PathItem.Trace, 'TRACE');
 end;
 
 end.

@@ -26,7 +26,10 @@ uses
   NuvemFiscalJson in 'S:\nuvem-fiscal\nuvemfiscal-sdk-delphi\Source\NuvemFiscalJson.pas',
   NuvemFiscalClient in 'S:\nuvem-fiscal\nuvemfiscal-sdk-delphi\Source\NuvemFiscalClient.pas',
   NuvemFiscalDtos in 'S:\nuvem-fiscal\nuvemfiscal-sdk-delphi\Source\NuvemFiscalDtos.pas',
-  OpenApiUtils in '..\Dist\OpenApiUtils.pas';
+  OpenApiUtils in '..\Dist\OpenApiUtils.pas',
+  PetStore3Client in 'PetStore3\PetStore3Client.pas',
+  PetStore3Dtos in 'PetStore3\PetStore3Dtos.pas',
+  PetStore3Json in 'PetStore3\PetStore3Json.pas';
 
 {$R *.RES}
 
