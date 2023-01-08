@@ -79,14 +79,16 @@ type
 
   TBuilderOptions = class
   private
+    FClientName: string;
+    FDocumentUrl: string;
     FDtoOptions: TDtoOptions;
     FServiceOptions: TServiceOptions;
-    FClientName: string;
     FXDataService: Boolean;
   public
     constructor Create;
     destructor Destroy; override;
     property ClientName: string read FClientName write FClientName;
+    property DocumentUrl: string read FDocumentUrl write FDocumentUrl;
     property DtoOptions: TDtoOptions read FDtoOptions;
     property ServiceOptions: TServiceOptions read FServiceOptions;
     property XDataService: Boolean read FXDataService write FXDataService;

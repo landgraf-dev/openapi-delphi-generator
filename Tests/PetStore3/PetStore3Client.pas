@@ -53,7 +53,7 @@ end;
 constructor TPetStore3Config.Create;
 begin
   inherited Create;
-  BaseUrl := '';
+  BaseUrl := 'https://petstore3.swagger.io/api/v3';
 end;
 
 { TPetStore3Client }

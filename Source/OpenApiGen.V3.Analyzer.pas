@@ -209,26 +209,29 @@ begin
 end;
 
 function TOpenApiAnalyzer.GetBaseUrl: string;
+var
+  Server: TServer;
 begin
-//  Result := Document.Host;
-//  if EndsStr('/', Result) then
-//    Result := Copy(Result, 1, Length(Result) - 1);
-//  if not StartsStr('/', Document.BasePath) then
-//    Result := Result + '/';
-//  Result := Result + Document.BasePath;
-//
-//  if Pos('://', Result) = 0 then
-//  begin
-//    if TProtocol.Https in Document.Schemes then
-//      Result := 'https://' + Result
-//    else
-//    if TProtocol.Http in Document.Schemes then
-//      Result := 'http://' + Result
-//    else
-//      // hard code this, but it should use same scheme as the original
-//      // OpenAPI document
-//      Result := 'https://' + Result;
-//  end;
+  Result := '/';
+  if Document.Servers <> nil then
+  begin
+    if Document.Servers.Count > 1 then
+      raise EOpenApiAnalyzerException.Create('Multiple servers are not supported');
+
+    Server := Document.Servers[0];
+    Result := Server.Url;
+  end;
+
+  if not StartsStr('/', Result) then
+    Result := Result + '/';
+
+  // Check if it's relative Url
+  if Pos('://', Result) = 0 then
+  begin
+    if Options.DocumentUrl = '' then
+      raise EOpenApiAnalyzerException.Create('Cannot determine the URL of the API spe, please provide it using DocumentUrl param');
+    Result := Options.DocumentUrl + Result;
+  end;
 end;
 
 function TOpenApiAnalyzer.MetaTypeFromReference(RefSchema: TReferenceSchema; const DefaultTypeName: string;
@@ -259,8 +262,6 @@ var
   ServiceDescription: string;
 begin
   if Operation = nil then Exit;
-
-//  PathItem.Servers;
 
   // Service Mode
   DoSolveServiceOperation(ServiceName, ServiceDescription, OperationName, Path, PathItem, Operation);
@@ -296,6 +297,9 @@ end;
 
 procedure TOpenApiAnalyzer.ProcessPathItem(const Path: string; PathItem: TPathItem);
 begin
+  if (Document.Servers <> nil) and (Document.Servers.Count > 1) then
+    raise EOpenApiAnalyzerException.Create('Multiple servers are not supported.');
+
   ProcessOperation(Path, PathItem, PathItem.Get, 'GET');
   ProcessOperation(Path, PathItem, PathItem.Put, 'PUT');
   ProcessOperation(Path, PathItem, PathItem.Post, 'POST');

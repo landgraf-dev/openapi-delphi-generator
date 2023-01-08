@@ -207,6 +207,8 @@ end;
 function TOpenApiAnalyzer.GetBaseUrl: string;
 begin
   Result := Document.Host;
+  if Result = '' then
+    Result := Options.DocumentUrl;
   if EndsStr('/', Result) then
     Result := Copy(Result, 1, Length(Result) - 1);
   if not StartsStr('/', Document.BasePath) then

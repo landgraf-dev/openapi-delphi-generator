@@ -36,6 +36,12 @@ begin
       Options.ClientName := Value;
     end);
 
+  option := TOptionsRegistry.RegisterOption<string>('url', 'u', 'Default URL of the OpenApi document',
+    procedure(const Value: string)
+    begin
+      Options.DocumentUrl := Value;
+    end);
+
   option := TOptionsRegistry.RegisterOption<TServiceSolvingMode>('mode', 'm',
     'Options: SingleClientFromOperationId, MultipleClientsFromFirstTagAndOperationId',
     procedure(const Value: TServiceSolvingMode)

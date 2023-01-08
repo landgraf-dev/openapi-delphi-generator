@@ -11,8 +11,9 @@ procedure Run;
 implementation
 
 uses
-  Bcl.Json.Reader,
   System.Net.HttpClient,
+  Bcl.Json.Reader,
+  Sparkle.Uri,
   OpenApiGen.V2.Importer,
   OpenApiGen.V3.Importer;
 
@@ -52,10 +53,17 @@ begin
   end;
 end;
 
-function LoadContent(const Source: string): string;
+function LoadContent(const Source: string; Options: TBuilderOptions): string;
+var
+  Uri: IUri;
 begin
   if StartsText('http://', Source) or StartsText('https://', Source) then
-    Result := LoadHttpContent(Source)
+  begin
+    Result := LoadHttpContent(Source);
+    Uri := TUri.Create(Source);
+    if Options.DocumentUrl = '' then
+      Options.DocumentUrl := Uri.Scheme + '://' + Uri.Authority;
+  end
   else
     Result := TFile.ReadAllText(Source, TEncoding.UTF8);
 end;
@@ -109,7 +117,7 @@ begin
     try
       if ParseCommandLine(GenOptions, Options) then
       begin
-        Content := LoadContent(GenOptions.InputDocument);
+        Content := LoadContent(GenOptions.InputDocument, Options);
         case GetOpenApiVersion(Content) of
           Swagger20: GenerateSourceV2(Content, Options, GenOptions);
           OpenApi30: GenerateSourceV3(Content, Options, GenOptions);
