@@ -244,6 +244,8 @@ end;
 
 function TOpenApiCustomAnalyzer.MetaTypeFromSchema(Schema: TJsonSchema; const DefaultTypeName: string;
   ListType: TListType): IMetaType;
+var
+  Schemas: TList<TJsonSchema>;
 begin
   if Schema = nil then
     raise EOpenApiAnalyzerException.Create('Schema not defined');
@@ -271,6 +273,19 @@ begin
   else
   if Schema is TArraySchema then
     Result := MetaTypeFromArray(TArraySchema(Schema), DefaultTypeName + 'Item', ListType)
+  else
+  if Schema is TOneOfSchema then
+  begin
+    Schemas := TOneOfSchema(Schema).Schemas;
+    if Schemas.Count = 0 then
+      raise EOpenApiAnalyzerException.Create('OneOf schema does not have sub schemas')
+    else
+    begin
+      if Schemas.Count > 1 then
+        Logger.Warning(Format('OneOf for type %s has multiple schemas, picking the first schema in list', [DefaultTypeName]));
+      Result := MetaTypeFromSchema(Schemas[0], DefaultTypeName, ListType);
+    end;
+  end
   else
     raise EOpenApiAnalyzerException.CreateFmt('Unsupported schema type: %s', [Schema.ClassName]);
 

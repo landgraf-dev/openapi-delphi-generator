@@ -199,7 +199,7 @@ begin
       end;
   else
     // TServiceSolvingMode.SingleClientFromOperationId
-    ServiceName := '';
+    ServiceName := Options.ClientName;
     OperationName := Operation.OperationId;
   end;
 end;

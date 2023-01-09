@@ -22,6 +22,7 @@ type
     function StatusCode: Integer;
     function ContentAsString: string;
     function ContentAsBytes: TBytes;
+    function GetHeader(const Name: string): string;
   end;
 
   TSparkleRestRequestFactory = class(TInterfacedObject, IRestRequestFactory)
@@ -82,6 +83,11 @@ destructor TSparkleRestResponse.Destroy;
 begin
   FClient.Free;
   inherited;
+end;
+
+function TSparkleRestResponse.GetHeader(const Name: string): string;
+begin
+  Result := FResponse.Headers.Get(Name);
 end;
 
 function TSparkleRestResponse.StatusCode: Integer;
