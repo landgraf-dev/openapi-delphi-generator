@@ -65,16 +65,19 @@ type
   TBooleanMetaType = class(TMetaType)
   public
     function TypeName: string; override;
+    function CodeToParam(const ParamName: string): string; override;
   end;
 
   TDateTimeMetaType = class(TMetaType)
   public
     function TypeName: string; override;
+    function CodeToParam(const ParamName: string): string; override;
   end;
 
   TDateMetaType = class(TDateTimeMetaType)
   public
     function TypeName: string; override;
+    function CodeToParam(const ParamName: string): string; override;
   end;
 
   TBytesMetaType = class(TMetaType)
@@ -251,6 +254,7 @@ const
 
 function TMetaType.CodeToParam(const ParamName: string): string;
 begin
+  Result := ParamName;
 end;
 
 function TMetaType.Description: string;
@@ -408,6 +412,11 @@ end;
 
 { TBooleanMetaType }
 
+function TBooleanMetaType.CodeToParam(const ParamName: string): string;
+begin
+  Result := Format('BoolToParam(%s)', [ParamName]);
+end;
+
 function TBooleanMetaType.TypeName: string;
 begin
   Result := 'Boolean';
@@ -427,12 +436,22 @@ end;
 
 { TDateTimeMetaType }
 
+function TDateTimeMetaType.CodeToParam(const ParamName: string): string;
+begin
+  Result := Format('DateTimeToIso(%s)', [ParamName]);
+end;
+
 function TDateTimeMetaType.TypeName: string;
 begin
   Result := 'TDateTime';
 end;
 
 { TDateMetaType }
+
+function TDateMetaType.CodeToParam(const ParamName: string): string;
+begin
+  Result := Format('DateToIso(%s)', [ParamName]);
+end;
 
 function TDateMetaType.TypeName: string;
 begin

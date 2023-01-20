@@ -125,6 +125,7 @@ begin
 
     FClientUnit.UseUnit('SysUtils');
     FClientUnit.UseUnit('OpenApiRest');
+    FClientUnit.UseUnit('OpenApiUtils');
     FClientUnit.UseUnit(FJsonUnit.Name);
     FClientUnit.UseUnit(FDtoUnit.Name);
   end;
