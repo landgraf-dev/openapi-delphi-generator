@@ -245,9 +245,12 @@ begin
         if Operation.Tags.Count > 0 then
         begin
           ServiceName := Operation.Tags[0];
-          Tag := FDocument.Tags.Find(ServiceName);
-          if Tag <> nil then
-            ServiceDescription := Tag.Description;
+          if FDocument.Tags <> nil then
+          begin
+            Tag := FDocument.Tags.Find(ServiceName);
+            if Tag <> nil then
+              ServiceDescription := Tag.Description;
+          end;
         end
         else
           ServiceName := '';
