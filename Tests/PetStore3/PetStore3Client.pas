@@ -5,6 +5,7 @@ interface
 uses
   SysUtils, 
   OpenApiRest, 
+  OpenApiUtils, 
   PetStore3Json, 
   PetStore3Dtos;
 

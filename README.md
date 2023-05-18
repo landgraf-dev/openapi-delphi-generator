@@ -103,7 +103,39 @@ It will set the `Authorization` HTTP header with the token value prefixed by `Be
 
 ### Client compatibility
 
-Current the generated code doesn't require any dependency on 3rd party units, working with a plain Delphi install. The code is currently using `THttpClient` class from unit `System.Net.HttpClient` to perform the HTTP requests, so the client will only compile on Delphi versions that provide such class. An update is planned to support Indy in older Delphi versions.
+Current the generated code doesn't require any dependency on 3rd party units, working with a plain Delphi install. The code is currently using `THttpClient` class from unit `System.Net.HttpClient` to perform the HTTP requests, so the client will only compile on Delphi versions that provide such class.
+
+Alternatively, you can force the client to use Indy components to perform HTTP requests. For that, can use the following code snippet.
+
+```delphi
+uses {...}, OpenApiRest, OpenApiIndy;
+
+begin
+  // At the beginning of your application, set the DefaultRequestFactory
+  DefaultRequestFactory := TIndyRestRequestFactory.Create;
+end;
+```
+
+You can intercept the moment where a new `TIdHTTP` client is created - in case you want to setup specific properties like proxy or IO handlers. For that you can use a code like this:
+
+```delphi
+uses {...}, OpenApiRest, OpenApiIndy, IdHTTP;
+
+procedure TMainDataModule.IndyClientCreated(Client: TIdHTTP);
+begin
+  // Set extra Client properties here
+end;
+
+procedure TMainDataModule.DataModuleCreate(Sender: TObject);
+var
+  Factory: TIndyRestRequestFactory;
+begin
+  // At the beginning of your application, set the DefaultRequestFactory
+  Factory := TIndyRestRequestFactory.Create;
+  DefaultRequestFactory := Factory;
+  Factory.OnClientCreated := IndyClientCreated;
+end;
+```
 
 ## Compiling and running tests
 

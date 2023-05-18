@@ -7,6 +7,8 @@ uses
 
 type
   TPetStoreClientTests = class(TTestCase)
+  public
+    procedure SetUp; override;
   published
     procedure CreateAndGetPet;
   end;
@@ -85,6 +87,11 @@ begin
     on E: EOpenApiClientException do
       CheckEquals(404, E.Response.StatusCode);
   end;
+end;
+
+procedure TPetStoreClientTests.SetUp;
+begin
+  inherited;
 end;
 
 initialization
