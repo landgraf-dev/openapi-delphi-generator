@@ -3,7 +3,7 @@ unit OpenApiGen.CustomAnalyzer;
 interface
 
 uses
-  Generics.Collections, SysUtils, Character,
+  Generics.Collections, SysUtils, Character, StrUtils,
   Bcl.Logging,
   XData.JSchema.Classes,
   OpenApiGen.Options,
@@ -20,7 +20,6 @@ type
     FMetaClient: TMetaClient;
     FOptions: TBuilderOptions;
     FOwnsOptions: Boolean;
-    function ToId(const S: string): string; virtual;
   strict private
     FOnGetMethodName: TGetIdentifierProc;
     FOnGetTypeName: TGetIdentifierProc;
@@ -30,6 +29,9 @@ type
     FOnGetInterfaceName: TGetIdentifierProc;
     FOnGetServiceClassName: TGetIdentifierProc;
   strict protected
+    function ToId(const S: string): string; virtual;
+    function BuildOperationName(const Path, HttpMethod: string): string;
+
     function ProcessNaming(const S: string; Options: TNamingOptions): string;
     procedure DoGetPropName(var PropName: string; const Original: string);
     procedure DoGetFieldName(var FieldName: string; const Original: string);
@@ -65,6 +67,8 @@ type
 
   EOpenApiAnalyzerException = class(Exception)
   end;
+
+function ToPascalCase(const S: string): string;
 
 implementation
 
@@ -102,6 +106,26 @@ var
 end;
 
 { TOpenApiCustomAnalyzer }
+
+function TOpenApiCustomAnalyzer.BuildOperationName(const Path, HttpMethod: string): string;
+var
+  TempName: string;
+  Parts: TArray<string>;
+  Part: string;
+begin
+  TempName := Path;
+  TempName := StringReplace(TempName, '{', '', [rfReplaceAll]);
+  TempName := StringReplace(TempName, '}', '', [rfReplaceAll]);
+  Parts := SplitString(TempName + '/' + LowerCase(HttpMethod), '/');
+  if TempName = '/' then
+    Result := 'Root'
+  else
+    Result := '';
+  for Part in Parts do
+    if Part <> '' then
+      Result := Result + ToPascalCase(Part);
+  Result := ToId(Result);
+end;
 
 constructor TOpenApiCustomAnalyzer.Create(Options: TBuilderOptions; AOwnsOptions: Boolean);
 begin

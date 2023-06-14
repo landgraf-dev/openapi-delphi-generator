@@ -329,6 +329,10 @@ begin
   // Service Mode
   DoSolveServiceOperation(ServiceName, ServiceDescription, OperationName, Path, PathItem, Operation);
 
+  // Auto-generate operation name
+  if OperationName = '' then
+    OperationName := BuildOperationName(Path, HttpMethod);
+
   // Find or create the service
   DoGetServiceName(ServiceName, ServiceName);
   Service := MetaClient.FindService(ServiceName);

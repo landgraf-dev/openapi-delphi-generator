@@ -78,7 +78,11 @@ begin
   Result := False;
   try
     ConsumesJson := Operation.Consumes.Contains(MimeTypeJson);
+    if not ConsumesJson and (Operation.Consumes.Count = 0) then
+      ConsumesJson := Document.Consumes.Contains(MimeTypeJson);
     ProducesJson := Operation.Produces.Contains(MimeTypeJson);
+    if not ProducesJson and (Operation.Produces.Count = 0) then
+      ProducesJson := Document.Produces.Contains(MimeTypeJson);
 
     Method.HttpMethod := HttpMethod;
     Method.UrlPath := Path;
@@ -260,6 +264,10 @@ begin
 
   // Service Mode
   DoSolveServiceOperation(ServiceName, ServiceDescription, OperationName, Path, PathItem, Operation);
+
+  // Auto-generate operation name
+  if OperationName = '' then
+    OperationName := BuildOperationName(Path, HttpMethod);
 
   // Find or create the service
   DoGetServiceName(ServiceName, ServiceName);
