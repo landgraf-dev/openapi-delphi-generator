@@ -20,6 +20,7 @@ type
     FMetaClient: TMetaClient;
     FOptions: TBuilderOptions;
     FOwnsOptions: Boolean;
+    FObjectTypes: TDictionary<string, IMetaType>;
   strict private
     FOnGetMethodName: TGetIdentifierProc;
     FOnGetTypeName: TGetIdentifierProc;
@@ -134,10 +135,12 @@ begin
   FOwnsOptions := AOwnsOptions;
   FLogger := TLogManager.Instance.GetLogger(Self);
   FMetaClient := TMetaClient.Create;
+  FObjectTypes := TDictionary<string, IMetaType>.Create;
 end;
 
 destructor TOpenApiCustomAnalyzer.Destroy;
 begin
+  FObjectTypes.Free;
   FMetaClient.Free;
   if FOwnsOptions then
     FOptions.Free;
@@ -239,8 +242,12 @@ var
   MetaProp: TMetaProperty;
 begin
   DoGetTypeName(TypeName, Name);
+  if FObjectTypes.TryGetValue(TypeName, Result) then
+    Exit;
+
   ObjType := TObjectMetaType.Create(TypeName);
   Result := ObjType;
+  FObjectTypes.Add(TypeName, Result);
   ObjType.SetDescription(Schema.Description);
   for SchemaProp in Schema.Properties do
   begin

@@ -292,7 +292,7 @@ begin
   if Pos('://', Result) = 0 then
   begin
     if Options.DocumentUrl = '' then
-      raise Exception.Create('Cannot determine the URL of the API spe, please provide it using DocumentUrl param');
+      raise Exception.Create('Cannot determine the URL of the API spec, please provide it using DocumentUrl param');
     Result := Options.DocumentUrl + Result;
   end;
 end;
