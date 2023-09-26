@@ -109,7 +109,7 @@ type
   private
     FFieldName: string;
     FPropName: string;
-    FPropType: IMetaType;
+    [Weak] FPropType: IMetaType;
     FRestName: string;
     FRequired: Boolean;
     FDescription: string;
@@ -231,10 +231,12 @@ type
     FClientClass: string;
     FConfigClass: string;
     FBaseUrl: string;
+    FReferences: TList<IMetaType>;
   public
     constructor Create;
     destructor Destroy; override;
     procedure Clear;
+    procedure AddReference(AType: IMetaType); // just for memory management
     function FindMetaType(const Name: string): IMetaType;
     function FindService(const Name: string): TMetaService;
     property BaseUrl: string read FBaseUrl write FBaseUrl;
@@ -522,10 +524,16 @@ end;
 
 { TMetaClient }
 
+procedure TMetaClient.AddReference(AType: IMetaType);
+begin
+  FReferences.Add(AType);
+end;
+
 procedure TMetaClient.Clear;
 begin
   MetaTypes.Clear;
   Services.Clear;
+  FReferences.Clear;
 end;
 
 constructor TMetaClient.Create;
@@ -533,10 +541,12 @@ begin
   inherited Create;
   FMetaTypes := TList<IMetaType>.Create;
   FServices := TObjectList<TMetaService>.Create;
+  FReferences := TList<IMetaType>.Create;
 end;
 
 destructor TMetaClient.Destroy;
 begin
+  FReferences.Free;
   FServices.Free;
   FMetaTypes.Free;
   inherited;
