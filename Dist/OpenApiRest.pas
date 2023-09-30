@@ -1,5 +1,11 @@
 unit OpenApiRest;
 
+//TODO: use Delphiversions.inc
+{$IF CompilerVersion >= 29}
+    {$DEFINE DelphiXE8}
+    {$DEFINE DelphiXE8_up}
+{$IFEND}
+
 interface
 
 uses
@@ -218,7 +224,11 @@ uses
 {$IFDEF FPC}
   OpenApiFpc,
 {$ELSE}
-  OpenApiHttp,
+  {$IFDEF DELPHIXE8_UP}
+    OpenApiHttp,
+  {$ELSE}
+    OpenApiIndy,
+  {$ENDIF}
 {$ENDIF}
   OpenApiUtils;
 
