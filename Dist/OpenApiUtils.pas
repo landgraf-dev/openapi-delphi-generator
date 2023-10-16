@@ -469,7 +469,7 @@ var
   HasTimeZone: Boolean;
   IsUTC: Boolean;
   CharIndex: Integer;
-  Mul: Double;
+  Mul: Integer;
 begin
   DateTime := 0;
   if Text = '' then
@@ -503,9 +503,8 @@ begin
         Mul := 100;
         repeat
           if not ExtractDigit(CharIndex, MsecDigit) then Exit(False);
-          Msec := Msec + Round(MsecDigit * Mul);
-          if Mul < 0.00001 then Exit(False); // 8 digits maximum
-          Mul := Mul / 10;
+          Msec := Msec + MsecDigit * Mul;
+          Mul := Mul div 10;
         until IsFinal(CharIndex, HasTimeZone, IsUTC);
       end;
     end;
