@@ -7,35 +7,176 @@ unit OpenApiJson;
   {$IF CompilerVersion >= 28}
     {$DEFINE DelphiXE7}
     {$DEFINE DelphiXE7_UP}
-   {$ENDIF}
+  {$ENDIF}
 {$ENDIF}
+
 
 interface
 
 uses
 {$IFDEF FPC}
-  OpenApiJsonWrapperFpc,
+  fpjson, jsonparser,
 {$ELSE}
   Generics.Collections,
   {$IFDEF DELPHIXE7_UP}
-    OpenApiJsonWrapper,
+    System.JSON,
   {$ELSE}
-    OpenApiJsonWrapperDbx,
+    Data.DBXJSON,
   {$ENDIF}
 {$ENDIF}
   SysUtils;
 
 type
-  TJSONValue = TJSONWrapper.TJSONValue;
-
 {$IFDEF FPC}
-  TJsonWrapper = OpenApiJsonWrapperFpc.TJsonWrapper;
+  TJSONValue = fpjson.TJSONData;
+  TJSONBool = fpjson.TJSONBoolean;
 {$ELSE}
   {$IFDEF DELPHIXE7_UP}
-    TJsonWrapper = OpenApiJsonWrapper.TJsonWrapper;
+    TJSONValue = System.JSON.TJSONValue;
   {$ELSE}
-    TJsonWrapper = OpenApiJsonWrapperDbx.TJsonWrapper;
+    TJSONValue = Data.DBXJSON.TJSONValue;
   {$ENDIF}
+{$ENDIF}
+
+  TJsonWrapper = class abstract
+  protected
+    function IsFloatingPoint(const Value: string): Boolean;
+  public
+    // method to convert basic types to/from TJSONValue
+    function StringToJsonValue(const Value: string): TJSONValue; virtual;
+    function StringFromJsonValue(Value: TJSONValue): string; virtual;
+    function IntegerToJsonValue(const Value: Integer): TJSONValue; virtual; abstract;
+    function IntegerFromJsonValue(Value: TJSONValue): Integer; virtual; abstract;
+    function Int64ToJsonValue(const Value: Int64): TJSONValue; virtual; abstract;
+    function Int64FromJsonValue(Value: TJSONValue): Int64; virtual; abstract;
+    function DoubleToJsonValue(const Value: Double): TJSONValue; virtual; abstract;
+    function DoubleFromJsonValue(Value: TJSONValue): Double; virtual; abstract;
+    function BooleanToJsonValue(const Value: Boolean): TJSONValue; virtual; abstract;
+    function BooleanFromJsonValue(Value: TJSONValue): Boolean; virtual; abstract;
+
+    // methods for JSON object manipulation
+    procedure ObjAddProp(JObj: TJSONValue; const Name: string; Value: TJSONValue); virtual; abstract;
+    function ObjContains(JObj: TJSONValue; const Name: string; out Value: TJSONValue): Boolean; virtual; abstract;
+
+    // methods for JSON array manipulation
+    procedure ArrayAdd(JArr: TJSONValue; Value: TJSONValue); virtual; abstract;
+    function ArrayGet(JArr: TJSONValue; Index: Integer): TJSONValue; virtual; abstract;
+    function ArrayLength(JArr: TJSONValue): Integer; virtual; abstract;
+
+    // JSON value constructors
+    function CreateObject: TJSONValue; virtual;
+    function CreateArray: TJSONValue; virtual;
+    function CreateNull: TJSONValue; virtual;
+
+    // Check for JSON types
+    function IsObject(Value: TJSONValue): Boolean; virtual;
+    function IsArray(Value: TJSONValue): Boolean; virtual;
+    function IsString(Value: TJSONValue): Boolean; virtual;
+    function IsNumber(Value: TJSONValue): Boolean; virtual;
+    function IsBoolean(Value: TJSONValue): Boolean; virtual; abstract;
+    function IsNull(Value: TJSONValue): Boolean; virtual;
+
+    // Json generating and parsing
+    function JsonValueToJson(Value: TJSONValue): string; virtual; abstract;
+    function JsonToJsonValue(const Value: string): TJSONValue; virtual; abstract;
+  end;
+
+{$IFDEF DELPHIXE7_UP}
+  //Implementation for Delphi XE7+
+  TJsonWrapperSystem = class(TJsonWrapper)
+  public
+    function IntegerToJsonValue(const Value: Integer): TJSONValue; override;
+    function IntegerFromJsonValue(Value: TJSONValue): Integer; override;
+    function Int64ToJsonValue(const Value: Int64): TJSONValue; override;
+    function Int64FromJsonValue(Value: TJSONValue): Int64; override;
+    function DoubleToJsonValue(const Value: Double): TJSONValue; override;
+    function DoubleFromJsonValue(Value: TJSONValue): Double; override;
+    function BooleanToJsonValue(const Value: Boolean): TJSONValue; override;
+    function BooleanFromJsonValue(Value: TJSONValue): Boolean; override;
+
+    // methods for JSON object manipulation
+    procedure ObjAddProp(JObj: TJSONValue; const Name: string; Value: TJSONValue); override;
+    function ObjContains(JObj: TJSONValue; const Name: string; out Value: TJSONValue): Boolean; override;
+
+    // methods for JSON array manipulation
+    procedure ArrayAdd(JArr: TJSONValue; Value: TJSONValue); override;
+    function ArrayGet(JArr: TJSONValue; Index: Integer): TJSONValue; override;
+    function ArrayLength(JArr: TJSONValue): Integer; override;
+
+    // Check for JSON types
+    function IsBoolean(Value: TJSONValue): Boolean; override;
+
+    // Json generating and parsing
+    function JsonValueToJson(Value: TJSONValue): string; override;
+    function JsonToJsonValue(const Value: string): TJSONValue; override;
+  end;
+{$ENDIF}
+
+
+{$IFDEF FPC}
+  //Implementation for FPC
+  TJsonWrapperFpc = class(TJsonWrapper)
+  public
+    // method to convert basic types to/from TJSONValue
+    function IntegerToJsonValue(const Value: Integer): TJSONValue; override;
+    function IntegerFromJsonValue(Value: TJSONValue): Integer; override;
+    function Int64ToJsonValue(const Value: Int64): TJSONValue; override;
+    function Int64FromJsonValue(Value: TJSONValue): Int64; override;
+    function DoubleToJsonValue(const Value: Double): TJSONValue; override;
+    function DoubleFromJsonValue(Value: TJSONValue): Double; override;
+    function BooleanToJsonValue(const Value: Boolean): TJSONValue; override;
+    function BooleanFromJsonValue(Value: TJSONValue): Boolean; override;
+
+    // methods for JSON object manipulation
+    procedure ObjAddProp(JObj: TJSONValue; const Name: string; Value: TJSONValue); override;
+    function ObjContains(JObj: TJSONValue; const Name: string; out Value: TJSONValue): Boolean; override;
+
+    // methods for JSON array manipulation
+    procedure ArrayAdd(JArr: TJSONValue; Value: TJSONValue); override;
+    function ArrayGet(JArr: TJSONValue; Index: Integer): TJSONValue; override;
+    function ArrayLength(JArr: TJSONValue): Integer; override;
+
+    // Check for JSON types
+    function IsBoolean(Value: TJSONValue): Boolean; override;
+
+    // Json generating and parsing
+    function JsonValueToJson(Value: TJSONValue): string; override;
+    function JsonToJsonValue(const Value: string): TJSONValue; override;
+  end;
+{$ENDIF}
+
+{$IFNDEF FPC}
+{$IFNDEF DELPHIXE7_UP}
+  //Implementation for DBX (Delphi <XE7)
+  TJsonWrapperDbx = class(TJsonWrapper)
+  public
+    // method to convert basic types to/from TJSONValue
+    function IntegerToJsonValue(const Value: Integer): TJSONValue; override;
+    function IntegerFromJsonValue(Value: TJSONValue): Integer; override;
+    function Int64ToJsonValue(const Value: Int64): TJSONValue; override;
+    function Int64FromJsonValue(Value: TJSONValue): Int64; override;
+    function DoubleToJsonValue(const Value: Double): TJSONValue; override;
+    function DoubleFromJsonValue(Value: TJSONValue): Double; override;
+    function BooleanToJsonValue(const Value: Boolean): TJSONValue; override;
+    function BooleanFromJsonValue(Value: TJSONValue): Boolean; override;
+
+    // methods for JSON object manipulation
+    procedure ObjAddProp(JObj: TJSONValue; const Name: string; Value: TJSONValue); override;
+    function ObjContains(JObj: TJSONValue; const Name: string; out Value: TJSONValue): Boolean; override;
+
+    // methods for JSON array manipulation
+    procedure ArrayAdd(JArr: TJSONValue; Value: TJSONValue); override;
+    function ArrayGet(JArr: TJSONValue; Index: Integer): TJSONValue; override;
+    function ArrayLength(JArr: TJSONValue): Integer; override;
+
+    // Check for JSON types
+    function IsBoolean(Value: TJSONValue): Boolean; override;
+
+    // Json generating and parsing
+    function JsonValueToJson(Value: TJSONValue): string; override;
+    function JsonToJsonValue(const Value: string): TJSONValue; override;
+  end;
+{$ENDIF}
 {$ENDIF}
 
 
@@ -101,6 +242,382 @@ function JsonWrapper: TJsonWrapper;
 begin
   Result := _Json;
 end;
+
+{ TJsonWrapper }
+
+function TJsonWrapper.CreateArray: TJSONValue;
+begin
+  Result := TJSONArray.Create;
+end;
+
+function TJsonWrapper.CreateNull: TJSONValue;
+begin
+  Result := TJSONNull.Create;
+end;
+
+function TJsonWrapper.CreateObject: TJSONValue;
+begin
+  Result := TJSONObject.Create;
+end;
+
+function TJsonWrapper.IsArray(Value: TJSONValue): Boolean;
+begin
+  Result := Value is TJSONArray;
+end;
+
+function TJsonWrapper.IsFloatingPoint(const Value: string): Boolean;
+var
+  DotPos: Integer;
+  DotMinus: Integer;
+begin
+  DotPos := Pos('.', Value);
+  DotMinus := Pos('-', Value);
+  Result := (DotPos > 0) or (DotMinus > 2);
+  // TODO: There might be numbers with minus and still integer, e.g. 100e-1
+end;
+
+function TJsonWrapper.IsNull(Value: TJSONValue): Boolean;
+begin
+  Result := Value is TJSONNull;
+end;
+
+function TJsonWrapper.IsNumber(Value: TJSONValue): Boolean;
+begin
+  Result := Value is TJSONNumber;
+end;
+
+function TJsonWrapper.IsObject(Value: TJSONValue): Boolean;
+begin
+  Result := Value is TJSONObject;
+end;
+
+function TJsonWrapper.IsString(Value: TJSONValue): Boolean;
+begin
+  Result := Value is TJSONString;
+end;
+
+function TJsonWrapper.StringFromJsonValue(Value: TJSONValue): string;
+begin
+  if IsString(Value) then
+    Result := TJSONString(Value).Value
+  else
+    Result := '';
+end;
+
+function TJsonWrapper.StringToJsonValue(const Value: string): TJSONValue;
+begin
+  Result := TJSONString.Create(Value);
+end;
+
+
+{$IFDEF DELPHIXE7_UP}
+{ TJsonWrapperSystem }
+
+procedure TJsonWrapperSystem.ArrayAdd(JArr: TJSONValue; Value: TJSONValue);
+begin
+  TJSONArray(JArr).AddElement(Value);
+end;
+
+function TJsonWrapperSystem.ArrayGet(JArr: TJSONValue; Index: Integer): TJSONValue;
+begin
+  Result := TJSONArray(JArr).Items[Index];
+end;
+
+function TJsonWrapperSystem.ArrayLength(JArr: TJSONValue): Integer;
+begin
+  Result := TJSONArray(JArr).Count;
+end;
+
+function TJsonWrapperSystem.BooleanFromJsonValue(Value: TJSONValue): Boolean;
+begin
+  if IsBoolean(Value) then
+    Result := TJSONBool(Value).AsBoolean
+  else
+    Result := False;
+end;
+
+function TJsonWrapperSystem.BooleanToJsonValue(const Value: Boolean): TJSONValue;
+begin
+  if Value then
+    Result := TJSONTrue.Create
+  else
+    Result := TJSONFalse.Create;
+end;
+
+function TJsonWrapperSystem.DoubleFromJsonValue(Value: TJSONValue): Double;
+begin
+  Result := 0;
+  if IsNumber(Value) then
+    Result := TJSONNumber(Value).AsDouble;
+end;
+
+function TJsonWrapperSystem.DoubleToJsonValue(const Value: Double): TJSONValue;
+begin
+  Result := TJSONNumber.Create(Value);
+end;
+
+function TJsonWrapperSystem.Int64FromJsonValue(Value: TJSONValue): Int64;
+begin
+  Result := 0;
+  if IsNumber(Value) and not IsFloatingPoint(TJSONNumber(Value).Value) then
+    Result := TJSONNumber(Value).AsInt64;
+end;
+
+function TJsonWrapperSystem.Int64ToJsonValue(const Value: Int64): TJSONValue;
+begin
+  Result := TJSONNumber.Create(Value);
+end;
+
+function TJsonWrapperSystem.IntegerFromJsonValue(Value: TJSONValue): Integer;
+begin
+  Result := 0;
+  if IsNumber(Value) and not IsFloatingPoint(TJSONNumber(Value).Value) then
+    Result := TJSONNumber(Value).AsInt;
+end;
+
+function TJsonWrapperSystem.IntegerToJsonValue(const Value: Integer): TJSONValue;
+begin
+  Result := TJSONNumber.Create(Value);
+end;
+
+function TJsonWrapperSystem.IsBoolean(Value: TJSONValue): Boolean;
+begin
+  Result := Value is TJSONBool;
+end;
+
+function TJsonWrapperSystem.JsonToJsonValue(const Value: string): TJSONValue;
+begin
+  Result := TJSONObject.ParseJSONValue(Value);
+end;
+
+function TJsonWrapperSystem.JsonValueToJson(Value: TJSONValue): string;
+begin
+  Result := Value.ToString;
+end;
+
+procedure TJsonWrapperSystem.ObjAddProp(JObj: TJSONValue; const Name: string; Value: TJSONValue);
+begin
+  TJSONObject(JObj).AddPair(Name, Value);
+end;
+
+function TJsonWrapperSystem.ObjContains(JObj: TJSONValue; const Name: string; out Value: TJSONValue): Boolean;
+begin
+  Value := TJSONObject(JObj).GetValue(Name);
+  Result := Value <> nil;
+end;
+
+{$ENDIF}
+
+
+{$IFDEF FPC}
+{ TJsonWrapperFpc }
+
+procedure TJsonWrapperFpc.ArrayAdd(JArr: TJSONValue; Value: TJSONValue);
+begin
+  TJSONArray(JArr).Add(Value);
+end;
+
+function TJsonWrapperFpc.ArrayGet(JArr: TJSONValue; Index: Integer): TJSONValue;
+begin
+  Result := TJSONArray(JArr).Items[Index];
+end;
+
+function TJsonWrapperFpc.ArrayLength(JArr: TJSONValue): Integer;
+begin
+  Result := TJSONArray(JArr).Count;
+end;
+
+function TJsonWrapperFpc.BooleanFromJsonValue(Value: TJSONValue): Boolean;
+begin
+  if IsBoolean(Value) then
+    Result := TJSONBool(Value).AsBoolean
+  else
+    Result := False;
+end;
+
+function TJsonWrapperFpc.BooleanToJsonValue(const Value: Boolean): TJSONValue;
+begin
+  if Value then
+    Result := TJSONBool.Create(True)
+  else
+    Result := TJSONBool.Create(False);
+end;
+
+function TJsonWrapperFpc.DoubleFromJsonValue(Value: TJSONValue): Double;
+begin
+  Result := 0;
+  if IsNumber(Value) then
+    Result := TJSONNumber(Value).AsFloat;
+end;
+
+function TJsonWrapperFpc.DoubleToJsonValue(const Value: Double): TJSONValue;
+begin
+  Result := TJSONFloatNumber.Create(Value);
+end;
+
+function TJsonWrapperFpc.Int64FromJsonValue(Value: TJSONValue): Int64;
+begin
+  Result := 0;
+  if IsNumber(Value) then
+    Result := TJSONNumber(Value).AsInt64;
+end;
+
+function TJsonWrapperFpc.Int64ToJsonValue(const Value: Int64): TJSONValue;
+begin
+  Result := TJSONInt64Number.Create(Value);
+end;
+
+function TJsonWrapperFpc.IntegerFromJsonValue(Value: TJSONValue): Integer;
+begin
+  Result := 0;
+  if IsNumber(Value) then
+    Result := TJSONNumber(Value).AsInteger;
+end;
+
+function TJsonWrapperFpc.IntegerToJsonValue(const Value: Integer): TJSONValue;
+begin
+  Result := TJSONIntegerNumber.Create(Value);
+end;
+
+function TJsonWrapperFpc.IsBoolean(Value: TJSONValue): Boolean;
+begin
+  Result := Value is TJSONBool;
+end;
+
+function TJsonWrapperFpc.JsonToJsonValue(const Value: string): TJSONValue;
+begin
+  Result := fpjson.GetJSON(Value);
+end;
+
+function TJsonWrapperFpc.JsonValueToJson(Value: TJSONValue): string;
+begin
+  Result := Value.AsJSON;
+end;
+
+procedure TJsonWrapperFpc.ObjAddProp(JObj: TJSONValue; const Name: string; Value: TJSONValue);
+begin
+  TJSONObject(JObj).Add(Name, Value);
+end;
+
+function TJsonWrapperFpc.ObjContains(JObj: TJSONValue; const Name: string; out Value: TJSONValue): Boolean;
+begin
+  Value := TJSONObject(JObj).Find(Name);
+  Result := Value <> nil;
+end;
+
+{$ENDIF}
+
+{$IFNDEF FPC}
+{$IFNDEF DELPHIXE7_UP}
+{ TJsonWrapperDbx }
+
+procedure TJsonWrapperDbx.ArrayAdd(JArr: TJSONValue; Value: TJSONValue);
+begin
+  TJSONArray(JArr).AddElement(Value);
+end;
+
+function TJsonWrapperDbx.ArrayGet(JArr: TJSONValue; Index: Integer): TJSONValue;
+begin
+  Result := TJSONArray(JArr).Get(Index);
+end;
+
+function TJsonWrapperDbx.ArrayLength(JArr: TJSONValue): Integer;
+begin
+  Result := TJSONArray(JArr).Size;
+end;
+
+function TJsonWrapperDbx.BooleanFromJsonValue(Value: TJSONValue): Boolean;
+begin
+  if IsBoolean(Value) then
+  begin
+      if Value is TJSONTrue then
+        Result := True
+      else
+        Result := False;    //Assert(Value is TJSONFalse)
+  end
+  else
+    Result := False;
+end;
+
+function TJsonWrapperDbx.BooleanToJsonValue(const Value: Boolean): TJSONValue;
+begin
+  if Value then
+    Result := TJSONTrue.Create
+  else
+    Result := TJSONFalse.Create;
+end;
+
+function TJsonWrapperDbx.DoubleFromJsonValue(Value: TJSONValue): Double;
+begin
+  Result := 0;
+  if IsNumber(Value) then
+    Result := TJSONNumber(Value).AsDouble;
+end;
+
+function TJsonWrapperDbx.DoubleToJsonValue(const Value: Double): TJSONValue;
+begin
+  Result := TJSONNumber.Create(Value);
+end;
+
+function TJsonWrapperDbx.Int64FromJsonValue(Value: TJSONValue): Int64;
+begin
+  Result := 0;
+  if IsNumber(Value) and not IsFloatingPoint(TJSONNumber(Value).Value) then
+    Result := TJSONNumber(Value).AsInt64;
+end;
+
+function TJsonWrapperDbx.Int64ToJsonValue(const Value: Int64): TJSONValue;
+begin
+  Result := TJSONNumber.Create(Value);
+end;
+
+function TJsonWrapperDbx.IntegerFromJsonValue(Value: TJSONValue): Integer;
+begin
+  Result := 0;
+  if IsNumber(Value) and not IsFloatingPoint(TJSONNumber(Value).Value) then
+    Result := TJSONNumber(Value).AsInt;
+end;
+
+function TJsonWrapperDbx.IntegerToJsonValue(const Value: Integer): TJSONValue;
+begin
+  Result := TJSONNumber.Create(Value);
+end;
+
+function TJsonWrapperDbx.IsBoolean(Value: TJSONValue): Boolean;
+begin
+  Result := (Value is TJSONTrue) or (Value is TJSONFalse);
+end;
+
+function TJsonWrapperDbx.JsonToJsonValue(const Value: string): TJSONValue;
+begin
+  Result := TJSONObject.ParseJSONValue(Value);
+end;
+
+function TJsonWrapperDbx.JsonValueToJson(Value: TJSONValue): string;
+begin
+  Result := Value.ToString;
+end;
+
+procedure TJsonWrapperDbx.ObjAddProp(JObj: TJSONValue; const Name: string; Value: TJSONValue);
+begin
+  TJSONObject(JObj).AddPair(Name, Value);
+end;
+
+function TJsonWrapperDbx.ObjContains(JObj: TJSONValue; const Name: string; out Value: TJSONValue): Boolean;
+var
+  Pair: TJSONPair;
+begin
+  Pair := TJSONObject(JObj).Get(Name);
+  if Assigned(Pair) then
+    Value := Pair.JsonValue
+  else
+    Value := nil;
+  Result := Value <> nil;
+end;
+
+{$ENDIF}
+{$ENDIF}
+
 
 { TCustomJsonConverter }
 
@@ -398,7 +915,16 @@ begin
 end;
 
 initialization
-  _Json := TJsonWrapper.Create;
+{$IFDEF FPC}
+  _Json := TJsonWrapperFpc.Create;
+{$ELSE}
+  {$IFDEF DELPHIXE7_UP}
+    _Json := TJsonWrapperSystem.Create;
+  {$ELSE}
+    _Json := TJsonWrapperDbx.Create;
+  {$ENDIF}
+{$ENDIF}
+
 finalization
   _Json.Free;
 end.
