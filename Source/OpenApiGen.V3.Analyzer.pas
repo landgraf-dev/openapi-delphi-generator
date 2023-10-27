@@ -242,7 +242,7 @@ begin
   case Options.ServiceOptions.SolvingMode of
     TServiceSolvingMode.MultipleClientsFromFirstTagAndOperationId:
       begin
-        if Operation.Tags.Count > 0 then
+        if (Operation.Tags <> nil) and (Operation.Tags.Count > 0) then
         begin
           ServiceName := Operation.Tags[0];
           if FDocument.Tags <> nil then
