@@ -22,6 +22,7 @@ function DateToISO(const Value: TDate): string;
 function ISOToDateTime(const Value: string): TDateTime;
 function ISOToDate(const Value: string): TDate;
 function BoolToParam(const Value: Boolean): string;
+function DoubleToParam(const Value: Double): string;
 
 resourcestring
   SInvalidDateFormat = 'Value %s is not a valid datetime';
@@ -43,6 +44,9 @@ type
     HasTimeZone: Boolean;
     IsUTC: Boolean;
   end;
+
+var
+  InternalFormatSettings: TFormatSettings;
 
 function NewTimeZoneInfo: TTimeZoneInfo;
 begin
@@ -628,4 +632,13 @@ begin
     Result := 'false';
 end;
 
+function DoubleToParam(const Value: Double): string;
+begin
+  Result := FloatToStr(Value, InternalFormatSettings);
+end;
+
+
+initialization
+  InternalFormatSettings := TFormatSettings.Create;
+  InternalFormatSettings.DecimalSeparator := '.';
 end.

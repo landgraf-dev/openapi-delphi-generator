@@ -49,6 +49,7 @@ type
   TDoubleMetaType = class(TMetaType)
   public
     function TypeName: string; override;
+    function CodeToParam(const ParamName: string): string; override;
   end;
 
   TIntegerMetaType = class(TMetaType)
@@ -387,6 +388,11 @@ begin
 end;
 
 { TDoubleMetaType }
+
+function TDoubleMetaType.CodeToParam(const ParamName: string): string;
+begin
+  Result := Format('DoubleToParam(%s)', [ParamName]);
+end;
 
 function TDoubleMetaType.TypeName: string;
 begin
