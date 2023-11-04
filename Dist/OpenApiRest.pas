@@ -1,5 +1,11 @@
 unit OpenApiRest;
 
+//TODO: use Delphiversions.inc
+{$IF CompilerVersion >= 29}
+    {$DEFINE DelphiXE8}
+    {$DEFINE DelphiXE8_up}
+{$IFEND}
+
 interface
 
 uses
@@ -21,7 +27,8 @@ type
   ['{55328D2F-FC30-48C7-9578-5A8A9152E4DA}']
     procedure SetUrl(const Url: string);
     procedure SetMethod(const Method: string);
-    procedure AddQueryParam(const Name, Value: string);
+    procedure AddQueryParam(const Name, Value: string); overload;
+    procedure AddQueryParam(const Name: string; const Value: Double); overload;
     procedure AddUrlParam(const Name, Value: string);
     procedure AddHeader(const Name, Value: string);
     procedure AddBody(const Value: string);
@@ -53,10 +60,13 @@ type
     procedure SetUrl(const Url: string);
     procedure SetMethod(const HttpMethod: string);
     procedure AddHeader(const Name, Value: string);
-    procedure AddQueryParam(const Name, Value: string); virtual;
+    procedure AddQueryParam(const Name, Value: string); overload; virtual;
+    procedure AddQueryParam(const Name: string; const Value: Double); overload; virtual;
     procedure AddUrlParam(const Name, Value: string); virtual;
     procedure AddBody(const Value: string); virtual;
     function Execute: IRestResponse; virtual; abstract;
+  public
+    class var DefaultFormatSettings: TFormatSettings;
   end;
 
   EOpenApiClientException = class(Exception)
@@ -214,7 +224,11 @@ uses
 {$IFDEF FPC}
   OpenApiFpc,
 {$ELSE}
-  OpenApiHttp,
+  {$IFDEF DELPHIXE8_UP}
+    OpenApiHttp,
+  {$ELSE}
+    OpenApiIndy,
+  {$ENDIF}
 {$ENDIF}
   OpenApiUtils;
 
@@ -294,6 +308,12 @@ end;
 procedure TRestRequest.AddQueryParam(const Name, Value: string);
 begin
   FQueryParams.Values[Name] := Value;
+end;
+
+//Do not rely on locale to convert Double to string:
+procedure TRestRequest.AddQueryParam(const Name: string; const Value: Double);
+begin
+  FQueryParams.Values[Name] := Format('%f', [Value], TRestRequest.DefaultFormatSettings);
 end;
 
 procedure TRestRequest.AddUrlParam(const Name, Value: string);
@@ -567,5 +587,8 @@ procedure TClientCredentialsTokenProvider.SetTokenEndpoint(const Value: string);
 begin
   FTokenEndpoint := Value;
 end;
+
+initialization
+  TRestRequest.DefaultFormatSettings := TFormatSettings.Create('en-US');
 
 end.

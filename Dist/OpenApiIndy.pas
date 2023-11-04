@@ -1,5 +1,11 @@
 unit OpenApiIndy;
 
+//TODO: use Delphiversions.inc
+{$IF CompilerVersion >= 29}
+    {$DEFINE DelphiXE8}
+    {$DEFINE DelphiXE8_up}
+{$IFEND}
+
 interface
 
 uses
@@ -127,5 +133,11 @@ function TIndyRestResponse.ContentAsString: string;
 begin
   Result := TEncoding.UTF8.GetString(ContentAsBytes);
 end;
+
+{$IFNDEF DELPHIXE8_UP}
+initialization
+  //For Delphi versions < XE8 only Indy will work
+  DefaultRequestFactory := TIndyRestRequestFactory.Create;;
+{$ENDIF}
 
 end.
