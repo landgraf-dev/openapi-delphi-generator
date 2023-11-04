@@ -3,10 +3,8 @@ unit OpenApiJson;
 {$IFDEF FPC}
   {$MODE Delphi}
 {$ELSE}
-  {$DEFINE DELPHIXE6_LOWER}
-  {$IF CompilerVersion >= 28}
-    {$UNDEF DELPHIXE6_LOWER}
-    {$DEFINE DelphiXE7_UP}
+  {$IF CompilerVersion < 28}
+    {$DEFINE USEDBX}
   {$ENDIF}
 {$ENDIF}
 
@@ -18,10 +16,10 @@ uses
   fpjson, jsonparser,
 {$ELSE}
   Generics.Collections,
-  {$IFDEF DELPHIXE7_UP}
-    System.JSON,
-  {$ELSE}
+  {$IFDEF USEDBX}
     Data.DBXJSON,
+  {$ELSE}
+    System.JSON,
   {$ENDIF}
 {$ENDIF}
   SysUtils;
@@ -31,10 +29,10 @@ type
   TJSONValue = fpjson.TJSONData;
   TJSONBool = fpjson.TJSONBoolean;
 {$ELSE}
-  {$IFDEF DELPHIXE7_UP}
-    TJSONValue = System.JSON.TJSONValue;
-  {$ELSE}
+  {$IFDEF USEDBX}
     TJSONValue = Data.DBXJSON.TJSONValue;
+  {$ELSE}
+    TJSONValue = System.JSON.TJSONValue;
   {$ENDIF}
 {$ENDIF}
 
@@ -157,7 +155,7 @@ end;
 
 function TJsonWrapper.ArrayGet(JArr: TJSONValue; Index: Integer): TJSONValue;
 begin
-{$IFDEF DELPHIXE6_LOWER}
+{$IFDEF USEDBX}
   Result := TJSONArray(JArr).Get(Index);
 {$ELSE}
   Result := TJSONArray(JArr).Items[Index];
@@ -166,7 +164,7 @@ end;
 
 function TJsonWrapper.ArrayLength(JArr: TJSONValue): Integer;
 begin
-{$IFDEF DELPHIXE6_LOWER}
+{$IFDEF USEDBX}
   Result := TJSONArray(JArr).Size;
 {$ELSE}
   Result := TJSONArray(JArr).Count;
@@ -177,7 +175,7 @@ function TJsonWrapper.BooleanFromJsonValue(Value: TJSONValue): Boolean;
 begin
   if IsBoolean(Value) then
   begin
-{$IFDEF DELPHIXE6_LOWER}
+{$IFDEF USEDBX}
     Result := Value is TJSONTrue;
 {$ELSE}
     Result := TJSONBool(Value).AsBoolean
@@ -286,7 +284,7 @@ end;
 
 function TJsonWrapper.IsBoolean(Value: TJSONValue): Boolean;
 begin
-{$IFDEF DELPHIXE6_LOWER}
+{$IFDEF USEDBX}
   Result := (Value is TJSONTrue) or (Value is TJSONFalse);
 {$ELSE}
   Result := Value is TJSONBool;
@@ -352,7 +350,7 @@ begin
 end;
 
 function TJsonWrapper.ObjContains(JObj: TJSONValue; const Name: string; out Value: TJSONValue): Boolean;
-{$IFDEF DELPHIXE6_LOWER}
+{$IFDEF USEDBX}
 var
   Pair: TJSONPair;
 {$ENDIF}
@@ -360,7 +358,7 @@ begin
 {$IFDEF FPC}
   Value := TJSONObject(JObj).Find(Name);
 {$ELSE}
-  {$IFDEF DELPHIXE6_LOWER}
+  {$IFDEF USEDBX}
   Pair := TJSONObject(JObj).Get(Name);
   if Assigned(Pair) then
     Value := Pair.JsonValue
