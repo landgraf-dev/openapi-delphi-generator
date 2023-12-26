@@ -109,7 +109,7 @@ type
     FConverter: TCustomJsonConverter;
     function SanitizedBaseUrl: string;
   protected
-    procedure CheckError(Response: IRestResponse);
+    procedure CheckError(Response: IRestResponse); virtual;
     function CreateConverter: TCustomJsonConverter; virtual;
     function Converter: TCustomJsonConverter;
   public
