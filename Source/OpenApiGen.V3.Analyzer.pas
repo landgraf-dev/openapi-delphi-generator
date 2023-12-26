@@ -57,8 +57,9 @@ begin
   // Build meta information
   MetaClient.Clear;
 
-  for Schema in Document.Components.Schemas do
-    MetaTypeFromSchema(Schema.Value, Schema.Key, TListType.ltAuto);
+  if (Document.Components <> nil) and (Document.Components.Schemas <> nil) then
+    for Schema in Document.Components.Schemas do
+      MetaTypeFromSchema(Schema.Value, Schema.Key, TListType.ltAuto);
   for Path in Document.Paths do
     ProcessPathItem(Path.Key, Path.Value);
 
