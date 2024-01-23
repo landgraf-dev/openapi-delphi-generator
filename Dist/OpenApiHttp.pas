@@ -3,12 +3,19 @@ unit OpenApiHttp;
 interface
 
 uses
-  System.SysUtils, System.Classes, System.Net.HttpClient, System.Net.URLClient,
-  OpenApiRest;
+  System.SysUtils, System.Classes, System.Net.HttpClient, System.Net.URLClient, System.ZLib, OpenApiRest;
 
 type
+  TClientCreatedEvent = procedure(Client: THttpClient; Request: IHttpRequest) of object;
+
   THttpRestRequest = class(TRestRequest)
+  strict private
+    FOnClientCreated: TClientCreatedEvent;
+  protected
+    procedure DoRedirect(const Sender: TObject; const ARequest: IHTTPRequest; const AResponse: IHTTPResponse;
+      ARedirections: Integer; var AAllow: Boolean);
   public
+    constructor Create(AOnClientCreated: TClientCreatedEvent);
     function Execute: IRestResponse; override;
   end;
 
@@ -16,7 +23,9 @@ type
   strict private
     FClient: THttpClient;
     FResponse: IHttpResponse;
-    FContent: TBytesStream;
+    FContent: TStream;
+    FBytes: TBytes;
+    FBytesLoaded: Boolean;
   public
     constructor Create(Response: IHttpResponse; Content: TBytesStream; Client: THttpClient);
     destructor Destroy; override;
@@ -27,8 +36,11 @@ type
   end;
 
   THttpRestRequestFactory = class(TInterfacedObject, IRestRequestFactory)
+  private
+    FOnClientCreated: TClientCreatedEvent;
   public
     function CreateRequest: IRestRequest;
+    property OnClientCreated: TClientCreatedEvent read FOnClientCreated write FOnClientCreated;
   end;
 
 implementation
@@ -37,10 +49,22 @@ implementation
 
 function THttpRestRequestFactory.CreateRequest: IRestRequest;
 begin
-  Result := THttpRestRequest.Create;
+  Result := THttpRestRequest.Create(FOnClientCreated);
 end;
 
 { THttpRestRequest }
+
+constructor THttpRestRequest.Create(AOnClientCreated: TClientCreatedEvent);
+begin
+  inherited Create;
+  FOnClientCreated := AOnClientCreated;
+end;
+
+procedure THttpRestRequest.DoRedirect(const Sender: TObject; const ARequest: IHTTPRequest; const AResponse: IHTTPResponse;
+  ARedirections: Integer; var AAllow: Boolean);
+begin
+  ARequest.RemoveHeader('Authorization');
+end;
 
 function THttpRestRequest.Execute: IRestResponse;
 var
@@ -53,6 +77,7 @@ var
 begin
   Client := THttpClient.Create;
   try
+    Client.OnRedirect := DoRedirect;
     Request := Client.GetRequest(Self.Method, BuildUrl);
     if Body <> '' then
       SourceStream := TStringStream.Create(Body, TEncoding.UTF8, False)
@@ -60,9 +85,10 @@ begin
       SourceStream := nil;
     for I := 0 to Headers.Count - 1 do
       Request.SetHeaderValue(Headers.Names[I], Headers.ValueFromIndex[I]);
-
     try
       Request.SourceStream := SourceStream;
+      if Assigned(FOnClientCreated) then
+       FOnClientCreated(Client, Request);
       Content := TBytesStream.Create;
       try
         Response := Client.Execute(Request, Content);
@@ -83,13 +109,50 @@ end;
 { THttpRestResponse }
 
 function THttpRestResponse.ContentAsBytes: TBytes;
+const
+  BufSize = 65536;
+var
+  BytesRead: Int64;
+  TotalRead: Int64;
 begin
-  Result := Copy(FContent.Bytes, 0, FContent.Size);
+  if FBytesLoaded then Exit(FBytes);
+
+  FContent.Position := 0;
+  if SameText(FResponse.ContentEncoding, 'deflate') then
+    FContent := TZDecompressionStream.Create(FContent, 15, True)
+  else
+  if SameText(FResponse.ContentEncoding, 'gzip') then
+    FContent := TZDecompressionStream.Create(FContent, 31, True);
+
+  SetLength(FBytes, 0);
+  TotalRead := 0;
+  repeat
+    SetLength(FBytes, Length(FBytes) + BufSize);
+    BytesRead := FContent.Read(FBytes[TotalRead], BufSize);
+    TotalRead := TotalRead + BytesRead;
+  until BytesRead = 0;
+  SetLength(FBytes, TotalRead);
+  Result := FBytes;
+  FBytesLoaded := True;
 end;
 
 function THttpRestResponse.ContentAsString: string;
+var
+  LCharset: string;
+  Encoding: TEncoding;
 begin
-  Result := FResponse.ContentAsString;
+  LCharset := FResponse.GetContentCharset;
+  if (LCharSet <> '') and not SameText(LCharSet, 'utf-8') then
+  begin
+    Encoding := TEncoding.GetEncoding(LCharSet);
+    try
+      Result := Encoding.GetString(ContentAsBytes);
+    finally
+      Encoding.Free;
+    end;
+  end
+  else
+    Result := TEncoding.UTF8.GetString(ContentAsBytes);
 end;
 
 constructor THttpRestResponse.Create(Response: IHttpResponse; Content: TBytesStream; Client: THttpClient);
