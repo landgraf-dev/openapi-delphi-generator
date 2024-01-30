@@ -50,6 +50,35 @@ type
 
 implementation
 
+//Interposer class
+//TZDecompressionStream does not support OwnsStream in XE4
+{$IF CompilerVersion < 26}      //XE4 or less
+type
+  TZDecompressionStream = class(ZLib.TZDecompressionStream)
+    private
+      FOwnsStream: Boolean;
+      FStream: TStream;
+    public
+      constructor Create(ASource: TStream; AWindowBits: Integer; AOwnsStream: Boolean); overload;
+      destructor Destroy; override;
+  end;
+
+constructor TZDecompressionStream.Create(ASource: TStream; AWindowBits: Integer; AOwnsStream: Boolean);
+begin
+  if AOwnsStream then
+    FStream := ASource;
+end;
+
+destructor TZDecompressionStream.Destroy;
+begin
+  if Assigned(FStream) then
+    FreeAndNil(FStream);
+end;
+
+{$ENDIF}
+
+
+
 { TIndyRestRequestFactory }
 
 function TIndyRestRequestFactory.CreateRequest: IRestRequest;
