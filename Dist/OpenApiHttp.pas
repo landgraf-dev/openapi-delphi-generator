@@ -11,12 +11,10 @@ type
   THttpRestRequest = class(TRestRequest)
   strict private
     FOnClientCreated: TClientCreatedEvent;
-  protected
-    procedure DoRedirect(const Sender: TObject; const ARequest: IHTTPRequest; const AResponse: IHTTPResponse;
-      ARedirections: Integer; var AAllow: Boolean);
+  strict protected
+    function InternalExecute: IRestResponse; override;
   public
     constructor Create(AOnClientCreated: TClientCreatedEvent);
-    function Execute: IRestResponse; override;
   end;
 
   THttpRestResponse = class(TInterfacedObject, IRestResponse)
@@ -24,6 +22,7 @@ type
     FClient: THttpClient;
     FResponse: IHttpResponse;
     FContent: TStream;
+    FWrapped: TStream;
     FBytes: TBytes;
     FBytesLoaded: Boolean;
   public
@@ -60,13 +59,7 @@ begin
   FOnClientCreated := AOnClientCreated;
 end;
 
-procedure THttpRestRequest.DoRedirect(const Sender: TObject; const ARequest: IHTTPRequest; const AResponse: IHTTPResponse;
-  ARedirections: Integer; var AAllow: Boolean);
-begin
-  ARequest.RemoveHeader('Authorization');
-end;
-
-function THttpRestRequest.Execute: IRestResponse;
+function THttpRestRequest.InternalExecute: IRestResponse;
 var
   Request: IHttpRequest;
   Response: IHttpResponse;
@@ -77,7 +70,7 @@ var
 begin
   Client := THttpClient.Create;
   try
-    Client.OnRedirect := DoRedirect;
+    Client.HandleRedirects := False;
     Request := Client.GetRequest(Self.Method, BuildUrl);
     if Body <> '' then
       SourceStream := TStringStream.Create(Body, TEncoding.UTF8, False)
@@ -119,11 +112,16 @@ begin
 
   FContent.Position := 0;
   if SameText(FResponse.ContentEncoding, 'deflate') then
-    FContent := TZDecompressionStream.Create(FContent, 15, True)
+  begin
+    FWrapped := FContent;
+    FContent := TZDecompressionStream.Create(FWrapped, 15)
+  end
   else
   if SameText(FResponse.ContentEncoding, 'gzip') then
-    FContent := TZDecompressionStream.Create(FContent, 31, True);
-
+  begin
+    FWrapped := FContent;
+    FContent := TZDecompressionStream.Create(FWrapped, 31);
+  end;
   SetLength(FBytes, 0);
   TotalRead := 0;
   repeat
@@ -167,6 +165,7 @@ destructor THttpRestResponse.Destroy;
 begin
   FClient.Free;
   FContent.Free;
+  FWrapped.Free;
   inherited;
 end;
 

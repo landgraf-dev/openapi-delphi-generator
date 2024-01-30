@@ -639,6 +639,10 @@ end;
 
 
 initialization
+{$IFDEF FPC}
+  GetLocaleFormatSettings(0, InternalFormatSettings);
+{$ELSE}
   InternalFormatSettings := TFormatSettings.Create;
+{$ENDIF}
   InternalFormatSettings.DecimalSeparator := '.';
 end.
