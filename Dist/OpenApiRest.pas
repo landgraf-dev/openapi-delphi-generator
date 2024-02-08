@@ -1,8 +1,10 @@
 unit OpenApiRest;
 
-{$IF CompilerVersion < 29}
-  {$DEFINE USEINDY}
-{$IFEND}
+{$IFNDEF FPC}
+  {$IF CompilerVersion < 29}
+    {$DEFINE USEINDY}
+  {$IFEND}
+{$ENDIF}
 
 interface
 
@@ -59,10 +61,12 @@ type
   protected
     function BuildUrl: string;
     function PercentEncode(const Value: string): string; virtual;
+    procedure RemoveHeader(const Name: string);
     property Body: string read FBody;
     property Method: string read FMethod;
     property Headers: TStrings read FHeaders;
     property Logger: IRestLogger read FLogger;
+    function InternalExecute: IRestResponse; virtual; abstract;
   public
     constructor Create;
     destructor Destroy; override;
@@ -73,7 +77,7 @@ type
     procedure AddQueryParam(const Name, Value: string); virtual;
     procedure AddUrlParam(const Name, Value: string); virtual;
     procedure AddBody(const Value: string); virtual;
-    function Execute: IRestResponse; virtual; abstract;
+    function Execute: IRestResponse;
   end;
 
   EOpenApiClientException = class(Exception)
@@ -370,9 +374,63 @@ begin
   inherited;
 end;
 
+function TRestRequest.Execute: IRestResponse;
+const
+  MaxRedirects = 5;
+var
+  Redirects: Integer;
+  RedirectToGet: Boolean;
+begin
+  Redirects := 0;
+  repeat
+    Result := InternalExecute;
+    case Result.StatusCode of
+      300, 301, 302, 303, 307, 308:
+        begin
+          Inc(Redirects);
+          Self.FUrl := Result.GetHeader('Location'); // solve relative URL later
+          if (Self.FUrl = '') or (Redirects > MaxRedirects) then
+            Break;
+
+          FUrlParams.Clear;
+          FQueryParams.Clear;
+          RemoveHeader('Authorization');
+          RemoveHeader('Cookie');
+
+          RedirectToGet := (Result.StatusCode = 303) or
+            // historical reasons, not described in specification
+            (SameText(FMethod, 'POST') and ((Result.StatusCode = 301) or (Result.StatusCode = 302)));
+          if RedirectToGet then
+          begin
+            FMethod := 'GET';
+            FBody := '';
+            RemoveHeader('Content-Encoding');
+            RemoveHeader('Content-Language');
+            RemoveHeader('Content-Location');
+            RemoveHeader('Content-Type');
+            RemoveHeader('Content-Length');
+            RemoveHeader('Digest');
+            RemoveHeader('Last-Modified');
+          end;
+        end;
+    else
+      Break;
+    end;
+  until False;
+end;
+
 function TRestRequest.PercentEncode(const Value: string): string;
 begin
   Result := OpenApiUtils.PercentEncode(Value);
+end;
+
+procedure TRestRequest.RemoveHeader(const Name: string);
+var
+  I: Integer;
+begin
+  I := FHeaders.IndexOfName(Name);
+  if I >= 0 then
+    FHeaders.Delete(I);
 end;
 
 procedure TRestRequest.SetMethod(const HttpMethod: string);
@@ -555,8 +613,6 @@ begin
   if Scope <> '' then
     OpenApiUtils.AppendQueryParam(Params, 'scope', Scope);
   Request.AddBody(Params);
-
-//  Request.AddHeader('Authorization', Basic);
 
   Response := Request.Execute;
   if (Response.StatusCode < 200) or (Response.StatusCode >= 300) then

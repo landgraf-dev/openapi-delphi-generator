@@ -3,9 +3,12 @@ unit OpenApiJson;
 {$IFDEF FPC}
   {$MODE Delphi}
 {$ELSE}
+  {$IF CompilerVersion < 30}
+    {$DEFINE NOJSONBOOL}
+  {$IFEND}
   {$IF CompilerVersion < 28}
     {$DEFINE USEDBX}
-  {$ENDIF}
+  {$IFEND}
 {$ENDIF}
 
 
@@ -175,7 +178,7 @@ function TJsonWrapper.BooleanFromJsonValue(Value: TJSONValue): Boolean;
 begin
   if IsBoolean(Value) then
   begin
-{$IFDEF USEDBX}
+{$IFDEF NOJSONBOOL}
     Result := Value is TJSONTrue;
 {$ELSE}
     Result := TJSONBool(Value).AsBoolean
@@ -284,7 +287,7 @@ end;
 
 function TJsonWrapper.IsBoolean(Value: TJSONValue): Boolean;
 begin
-{$IFDEF USEDBX}
+{$IFDEF NOJSONBOOL}
   Result := (Value is TJSONTrue) or (Value is TJSONFalse);
 {$ELSE}
   Result := Value is TJSONBool;
