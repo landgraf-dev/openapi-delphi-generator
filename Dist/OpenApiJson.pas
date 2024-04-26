@@ -364,7 +364,15 @@ begin
   {$IFDEF USEDBX}
   Pair := TJSONObject(JObj).Get(Name);
   if Assigned(Pair) then
-    Value := Pair.JsonValue
+  begin
+    Value := Pair.JsonValue;
+    {$IFDEF OPENAPI_NULLVALUES_WORKAROUND}
+      //With this define active (default: inactive) null is treated as not ...HasValue.
+      //This is a workaround for issue #28
+      if Value.Null then
+	    Value := nil;
+    {$ENDIF}
+  end
   else
     Value := nil;
   {$ELSE}
