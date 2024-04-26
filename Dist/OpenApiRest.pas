@@ -15,6 +15,8 @@ uses
 type
   TCustomJsonConverter = OpenApiJson.TCustomJsonConverter;
 
+  IRestLogger = interface;
+
   IRestResponse = interface
   ['{C2CE5CD8-FA9F-442F-9980-988A2A0EFF3D}']
     function StatusCode: Integer;
@@ -27,6 +29,7 @@ type
   ['{55328D2F-FC30-48C7-9578-5A8A9152E4DA}']
     procedure SetUrl(const Url: string);
     procedure SetMethod(const Method: string);
+    procedure SetLogger(ALogger: IRestLogger);
     procedure AddQueryParam(const Name, Value: string);
     procedure AddUrlParam(const Name, Value: string);
     procedure AddHeader(const Name, Value: string);
@@ -39,6 +42,13 @@ type
     function CreateRequest: IRestRequest;
   end;
 
+  IRestLogger = interface
+  ['{7D368E9F-00AD-4D6B-A036-589BC6209B9B}']
+    /// This function may return an Id that is used in LogResponse to identify the request
+    function LogRequest(AMethod: string; AUrl: string; ARequestBody: TStringStream): string;
+    procedure LogResponse(AMethod: string; AUrl: string; ALogId: string; AResponse: IRestResponse);
+  end;
+
   TRestRequest = class(TInterfacedObject, IRestRequest)
   private
     FUrl: string;
@@ -47,6 +57,7 @@ type
     FUrlParams: TStrings;
     FHeaders: TStrings;
     FBody: string;
+    FLogger: IRestLogger;
   protected
     function BuildUrl: string;
     function PercentEncode(const Value: string): string; virtual;
@@ -54,12 +65,14 @@ type
     property Body: string read FBody;
     property Method: string read FMethod;
     property Headers: TStrings read FHeaders;
+    property Logger: IRestLogger read FLogger;
     function InternalExecute: IRestResponse; virtual; abstract;
   public
     constructor Create;
     destructor Destroy; override;
     procedure SetUrl(const Url: string);
     procedure SetMethod(const HttpMethod: string);
+    procedure SetLogger(ALogger: IRestLogger);
     procedure AddHeader(const Name, Value: string);
     procedure AddQueryParam(const Name, Value: string); virtual;
     procedure AddUrlParam(const Name, Value: string); virtual;
@@ -83,10 +96,13 @@ type
     procedure SetBaseUrl(const Value: string);
     function GetRequestFactory: IRestRequestFactory;
     procedure SetRequestFactory(const Value: IRestRequestFactory);
+    function GetLogger: IRestLogger;
+    procedure SetLogger(const Value: IRestLogger);
 
     property BaseUrl: string read GetBaseUrl write SetBaseUrl;
     property AccessToken: string read GetAccessToken write SetAccessToken;
     property RequestFactory: IRestRequestFactory read GetRequestFactory write SetRequestFactory;
+    property Logger: IRestLogger read GetLogger write SetLogger;
   end;
 
   TCustomRestConfig = class(TInterfacedObject, IRestConfig)
@@ -94,17 +110,21 @@ type
     FBaseUrl: string;
     FAccessToken: string;
     FRequestFactory: IRestRequestFactory;
+    FLogger: IRestLogger;
     function GetAccessToken: string;
     function GetBaseUrl: string;
     procedure SetAccessToken(const Value: string);
     procedure SetBaseUrl(const Value: string);
     function GetRequestFactory: IRestRequestFactory;
     procedure SetRequestFactory(const Value: IRestRequestFactory);
+    function GetLogger: IRestLogger;
+    procedure SetLogger(const Value: IRestLogger);
   public
     constructor Create;
     property BaseUrl: string read GetBaseUrl write SetBaseUrl;
     property AccessToken: string read GetAccessToken write SetAccessToken;
     property RequestFactory: IRestRequestFactory read GetRequestFactory write SetRequestFactory;
+    property Logger: IRestLogger read GetLogger write SetLogger;
   end;
 
   TCustomRestService = class(TInterfacedObject)
@@ -269,6 +289,8 @@ begin
   Result.SetMethod(HttpMethod);
   if Config.AccessToken <> '' then
     Result.AddHeader('Authorization', 'Bearer ' + Config.AccessToken);
+  if Assigned(Config.Logger) then
+    Result.SetLogger(Config.Logger);
 end;
 
 destructor TCustomRestService.Destroy;
@@ -421,6 +443,12 @@ begin
   FUrl := Url;
 end;
 
+procedure TRestRequest.SetLogger(ALogger: IRestLogger);
+begin
+  FLogger := ALogger;
+end;
+
+
 { EOpenApiClientException }
 
 constructor EOpenApiClientException.Create(const Msg: string; Response: IRestResponse);
@@ -454,6 +482,11 @@ begin
   Result := FBaseUrl;
 end;
 
+function TCustomRestConfig.GetLogger: IRestLogger;
+begin
+  Result := FLogger;
+end;
+
 function TCustomRestConfig.GetRequestFactory: IRestRequestFactory;
 begin
   Result := FRequestFactory;
@@ -467,6 +500,11 @@ end;
 procedure TCustomRestConfig.SetBaseUrl(const Value: string);
 begin
   FBaseUrl := Value;
+end;
+
+procedure TCustomRestConfig.SetLogger(const Value: IRestLogger);
+begin
+  FLogger := Value;
 end;
 
 procedure TCustomRestConfig.SetRequestFactory(const Value: IRestRequestFactory);

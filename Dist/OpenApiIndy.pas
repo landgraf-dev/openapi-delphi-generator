@@ -71,6 +71,8 @@ var
   I: Integer;
   RequestBody: TStringStream;
   ResponseBody: TBytesStream;
+  Url: string;
+  LogId: string;
 begin
   Client := TIndyHTTP.Create;
   try
@@ -90,8 +92,13 @@ begin
           Client.Request.CustomHeaders.AddValue(Headers.Names[I], Headers.ValueFromIndex[I]);
         if Assigned(FOnClientCreated) then
           FOnClientCreated(Client);
-        Client.DoRequest(Self.Method, BuildUrl, RequestBody, ResponseBody, []);
+        Url := BuildUrl();
+        if Assigned(Logger) then
+          LogId := Logger.LogRequest(Self.Method, Url, RequestBody);
+        Client.DoRequest(Self.Method, Url, RequestBody, ResponseBody, []);
         Result := TIndyRestResponse.Create(Client, Copy(ResponseBody.Bytes, 0, ResponseBody.Size));
+        if Assigned(Logger) then
+          Logger.LogResponse(Self.Method, Url, LogId, Result);
         Client := nil;
       finally
         ResponseBody.Free;
