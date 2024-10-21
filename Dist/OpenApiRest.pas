@@ -45,7 +45,7 @@ type
   IRestLogger = interface
   ['{7D368E9F-00AD-4D6B-A036-589BC6209B9B}']
     /// This function may return an Id that is used in LogResponse to identify the request
-    function LogRequest(AMethod: string; AUrl: string; ARequestBody: TStringStream): string;
+    function LogRequest(AMethod: string; AUrl: string; ARequestBody: TStream): string;
     procedure LogResponse(AMethod: string; AUrl: string; ALogId: string; AResponse: IRestResponse);
   end;
 
