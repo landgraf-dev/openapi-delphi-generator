@@ -67,11 +67,14 @@ var
   SourceStream: TStream;
   Content: TBytesStream;
   I: Integer;
+  Url: string;
+  LogId: string;
 begin
   Client := THttpClient.Create;
   try
     Client.HandleRedirects := False;
-    Request := Client.GetRequest(Self.Method, BuildUrl);
+    Url := BuildUrl();
+    Request := Client.GetRequest(Self.Method, Url);
     if Body <> '' then
       SourceStream := TStringStream.Create(Body, TEncoding.UTF8, False)
     else
@@ -82,10 +85,15 @@ begin
       Request.SourceStream := SourceStream;
       if Assigned(FOnClientCreated) then
        FOnClientCreated(Client, Request);
+      if Assigned(Logger) then
+        LogId := Logger.LogRequest(Self.Method, Url, SourceStream);
+
       Content := TBytesStream.Create;
       try
         Response := Client.Execute(Request, Content);
         Result := THttpRestResponse.Create(Response, Content, Client);
+        if Assigned(Logger) then
+          Logger.LogResponse(Self.Method, Url, LogId, Result);
         Content := nil;
         Client := nil;
       finally
