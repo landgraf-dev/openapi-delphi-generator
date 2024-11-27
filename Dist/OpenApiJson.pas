@@ -335,11 +335,23 @@ begin
 end;
 
 function TJsonWrapper.JsonValueToJson(Value: TJSONValue): string;
+{$IFDEF USEDBX}
+var
+  JsonBytes: TBytes;
+{$ENDIF}
 begin
 {$IFDEF FPC}
   Result := Value.AsJSON;
 {$ELSE}
-  Result := Value.ToString;
+  {$IFDEF USEDBX}
+    //Result := Value.ToString; does not correctly escape values  (eg \)
+    //see discussion here https://stackoverflow.com/questions/77623475/how-to-convert-tjsonstring-into-string-containing-json
+    SetLength(JsonBytes, Value.EstimatedByteSize);
+    SetLength(JsonBytes, Value.ToBytes(JsonBytes, 0));      //ToBytes escapes all real unicode characters which is unnecessary
+    Result := TEncoding.UTF8.GetString(JsonBytes);          //but this is reverted here
+  {$ELSE}
+    Result := Value.ToString;
+  {$ENDIF}
 {$ENDIF}
 end;
 
