@@ -151,7 +151,7 @@ procedure TOpenApiCustomAnalyzer.DoGetFieldName(var FieldName: string; const Ori
 begin
   FieldName := ProcessNaming(Original, Options.DTOOptions.FieldNaming);
   if Assigned(FOnGetFieldName) then
-    FOnGetPropName(FieldName, Original);
+    FOnGetFieldName(FieldName, Original);
 end;
 
 procedure TOpenApiCustomAnalyzer.DoGetInterfaceName(var InterfaceName: string; const Original: string);
@@ -229,7 +229,7 @@ begin
   if Format = 'int64' then
     Result := TInt64MetaType.Create
   else
-    Result := TIntegerMetaType.Create
+    Result := TIntegerMetaType.Create;
 end;
 
 function TOpenApiCustomAnalyzer.MetaTypeFromObject(const Name: string; Schema: TObjectSchema): IMetaType;
@@ -323,6 +323,18 @@ begin
       Result := MetaTypeFromSchema(Schemas[0], DefaultTypeName, ListType);
     end;
   end
+  {else
+  // MetaTypeFromSchema(Schema, DefaultTypeName, ListType)
+  if (Schema is TAllOfSchema) and
+     (TAllOfSchema(Schema).AllOf.Count = 1) then
+  begin
+      // Delegate to the referenced schema and return its type
+      Exit(
+        MetaTypeFromSchema(
+          TAllOfSchema(Schema).AllOf[0],
+          DefaultTypeName,
+          ListType));
+  end}
   else
     raise EOpenApiAnalyzerException.CreateFmt('Unsupported schema type: %s', [Schema.ClassName]);
 

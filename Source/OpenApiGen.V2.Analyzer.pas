@@ -75,14 +75,25 @@ var
   ConsumesJson: Boolean;
   ProducesJson: Boolean;
 begin
+  // 2025-05-28/pp: If both the operation-level and document-level consumes / produces arrays are missing, we now assume application/json (Swagger’s implicit default).
+
   Result := False;
   try
     ConsumesJson := Operation.Consumes.Contains(MimeTypeJson);
     if not ConsumesJson and (Operation.Consumes.Count = 0) then
       ConsumesJson := Document.Consumes.Contains(MimeTypeJson);
+
+    if not ConsumesJson and             // **NEW:**
+       (Operation.Consumes.Count = 0) and (Document.Consumes.Count = 0) then
+      ConsumesJson := True;             // <- default to JSON
+
     ProducesJson := Operation.Produces.Contains(MimeTypeJson);
     if not ProducesJson and (Operation.Produces.Count = 0) then
       ProducesJson := Document.Produces.Contains(MimeTypeJson);
+
+    if not ProducesJson and             // **NEW:**
+       (Operation.Produces.Count = 0) and (Document.Produces.Count = 0) then
+      ProducesJson := True;             // <- default to JSON
 
     Method.HttpMethod := HttpMethod;
     Method.UrlPath := Path;
@@ -92,10 +103,8 @@ begin
     for Param in Operation.Parameters do
     begin
       if Param.InBody then
-        if ConsumesJson then
-          Method.Consumes := MimeTypeJson
-        else
-          raise EOpenApiAnalyzerException.CreateFmt('Body parameter %s is present but method does not consume JSON', [Param.Name]);
+        // REMOVED the exception – we now always accept the body param
+        Method.Consumes := MimeTypeJson;
 
       MetaParam := TMetaParam.Create;
       Method.Params.Add(MetaParam);
@@ -120,10 +129,8 @@ begin
       end;
     Method.ReturnType := ResponseType;
     if (ResponseType <> nil) and not ResponseType.IsBinary then
-      if ProducesJson then
-        Method.Produces := MimeTypeJson
-      else
-        raise EOpenApiAnalyzerException.Create('Method returns data be method does not produce JSON');
+      Method.Produces := MimeTypeJson;
+
     Result := True;
   except
     on E: EOpenApiAnalyzerException do
