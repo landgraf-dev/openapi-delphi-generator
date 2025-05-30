@@ -57,7 +57,7 @@ begin
       OptionsValue: TValue;
       Deserializer: TJsonDeserializer;
     begin
-      Json := TFile.ReadAllText(Value);
+      Json := TFile.ReadAllText(Value, TEncoding.UTF8);
       OptionsValue := Options;
       Deserializer := TJsonDeserializer.Create;
       try
