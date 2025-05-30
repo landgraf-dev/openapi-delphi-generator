@@ -63,6 +63,11 @@ type
     function TypeName: string; override;
   end;
 
+  TIntMetaType = class(TIntegerMetaType)
+  public
+    function TypeName: string; override;
+  end;
+
   TBooleanMetaType = class(TMetaType)
   public
     function TypeName: string; override;
@@ -418,6 +423,12 @@ begin
   Result := 'Int64';
 end;
 
+{ TIntMetaType }
+
+function TIntMetaType.TypeName: string;
+begin
+  Result := 'Int';
+end;
 { TBooleanMetaType }
 
 function TBooleanMetaType.CodeToParam(const ParamName: string): string;
