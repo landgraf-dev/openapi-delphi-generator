@@ -123,6 +123,7 @@ type
     function GetHasValuePropName: string;
     function GetIsNullable: Boolean;
   public
+    function Clone: TMetaProperty;
     property FieldName: string read FFieldName write FFieldName;
     property PropName: string read FPropName write FPropName;
     property RestName: string read FRestName write FRestName;
@@ -523,6 +524,26 @@ begin
 end;
 
 { TMetaProperty }
+
+function TMetaProperty.Clone: TMetaProperty;
+var
+  lProperty: TMetaProperty;
+begin
+  lProperty := TMetaProperty.Create;
+  try
+    lProperty.FFieldName := FFieldName;
+    lProperty.FPropName := FPropName;
+    lProperty.FPropType := FPropType;
+    lProperty.FRestName := FRestName;
+    lProperty.FRequired := FRequired;
+    lProperty.FDescription := FDescription;
+
+    Result := lProperty;
+    lProperty := nil;
+  finally
+    lProperty.Free;
+  end;
+end;
 
 function TMetaProperty.GetIsNullable: Boolean;
 begin
