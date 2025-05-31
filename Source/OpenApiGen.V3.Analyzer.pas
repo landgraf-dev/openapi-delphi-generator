@@ -147,7 +147,7 @@ begin
                 ResponseType := TargetResponseType
               else
               if ResponseType.TypeName <> TargetResponseType.TypeName then
-                raise EOpenApiAnalyzerException.CreateFmt('Ambiguous response types: %s and %s', [ResponseType.TypeName, TargetResponseType.TypeName]);
+                Logger.Warning(string.Format('Ambiguous response types for %s: %s and %s', [Operation.OperationId, ResponseType.TypeName, TargetResponseType.TypeName]))
             end;
       end;
     Method.ReturnType := ResponseType;

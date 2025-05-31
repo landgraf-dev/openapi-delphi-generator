@@ -249,6 +249,10 @@ begin
   ObjType := TObjectMetaType.Create(TypeName);
   Result := ObjType;
   FObjectTypes.Add(TypeName, Result);
+
+  if Schema = nil then
+    Exit;
+
   ObjType.SetDescription(Schema.Description);
 
   for SchemaProp in Schema.Properties do
@@ -282,7 +286,12 @@ end;
 function TOpenApiCustomAnalyzer.MetaTypeFromSchema(Schema: TJsonSchema; const DefaultTypeName: string;
   ListType: TListType): IMetaType;
 var
+  ObjectType: TObjectMetaType;
+  Prop: TMetaProperty;
   Schemas: TList<TJsonSchema>;
+  SubObjectType: TObjectMetaType;
+  SubSchema: TJsonSchema;
+  SubType: IMetaType;
 begin
   if Schema = nil then
     raise EOpenApiAnalyzerException.Create('Schema not defined');
@@ -335,6 +344,31 @@ begin
           DefaultTypeName,
           ListType));
   end}
+  else
+  if Schema is TAllOfSchema then
+  begin
+    Schemas := TAllOfSchema(Schema).Schemas;
+    if Schemas.Count = 0 then
+      raise EOpenApiAnalyzerException.Create('AllOf schema does not have sub schemas');
+
+    Result := MetaTypeFromObject(DefaultTypeName, nil);
+    ObjectType := TObjectMetaType(Result);
+
+    for SubSchema in Schemas do
+    begin
+      SubType := MetaTypeFromSchema(SubSchema, DefaultTypeName, ListType);
+      if SubType is TObjectMetaType then
+      begin
+        SubObjectType := TObjectMetaType(SubType);
+        for Prop in SubObjectType.Props do
+          ObjectType.Props.Add(Prop.Clone);
+      end
+      else if Schemas.Count > 1 then
+        raise EOpenApiAnalyzerException.Create('Only one non-object property allowed in AllOf schema')
+      else
+        Exit(SubType);
+    end;
+  end
   else
     raise EOpenApiAnalyzerException.CreateFmt('Unsupported schema type: %s', [Schema.ClassName]);
 
