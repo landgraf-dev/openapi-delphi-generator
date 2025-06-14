@@ -360,6 +360,7 @@ var
 begin
 {$IFDEF FPC}
   Value := TJSONObject(JObj).Find(Name);
+  Result := Value <> nil;
 {$ELSE}
   {$IFDEF USEDBX}
   Pair := TJSONObject(JObj).Get(Name);
