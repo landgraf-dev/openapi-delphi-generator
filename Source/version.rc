@@ -1,6 +1,6 @@
 VS_VERSION_INFO VERSIONINFO
-  FILEVERSION 1,1,1,0
-  PRODUCTVERSION 1,1,1,0
+  FILEVERSION 1,1,7,0
+  PRODUCTVERSION 1,1,7,0
   FILEFLAGSMASK VS_FFI_FILEFLAGSMASK
 #ifdef DEBUG
   FILEFLAGS VS_FF_DEBUG
@@ -15,10 +15,10 @@ BEGIN
     BLOCK "040904b0"
     BEGIN
       VALUE "FileDescription", "OpenApi Delphi Generator\0"
-      VALUE "FileVersion", "1.1.1.0\0"
-      VALUE "LegalCopyright", "© 2022 Landgraf.dev All Rights Reserved\0"
+      VALUE "FileVersion", "1.1.7.0\0"
+      VALUE "LegalCopyright", "© 2025 Landgraf.dev All Rights Reserved\0"
       VALUE "ProductName", "OpenApi Delphi Generator\0"
-      VALUE "ProductVersion", "1.1.1.0\0"
+      VALUE "ProductVersion", "1.1.7.0\0"
     END
   END
   BLOCK "VarFileInfo"

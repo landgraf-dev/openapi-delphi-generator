@@ -1,7 +1,7 @@
 ﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
         <ProjectGuid>{C6B5D770-790C-401A-95DF-F22D98BC81B3}</ProjectGuid>
-        <ProjectVersion>20.2</ProjectVersion>
+        <ProjectVersion>20.3</ProjectVersion>
         <FrameworkType>None</FrameworkType>
         <Base>True</Base>
         <Config Condition="'$(Config)'==''">Debug</Config>
@@ -75,6 +75,12 @@
         <CfgParent>Base</CfgParent>
         <Base>true</Base>
     </PropertyGroup>
+    <PropertyGroup Condition="('$(Platform)'=='Win32' and '$(Cfg_2)'=='true') or '$(Cfg_2_Win32)'!=''">
+        <Cfg_2_Win32>true</Cfg_2_Win32>
+        <CfgParent>Cfg_2</CfgParent>
+        <Cfg_2>true</Cfg_2>
+        <Base>true</Base>
+    </PropertyGroup>
     <PropertyGroup Condition="'$(Base)'!=''">
         <DCC_DcuOutput>.\$(Platform)\$(Config)</DCC_DcuOutput>
         <DCC_ExeOutput>.\$(Platform)\$(Config)</DCC_ExeOutput>
@@ -85,7 +91,9 @@
         <DCC_K>false</DCC_K>
         <DCC_Namespace>System;Xml;Data;Datasnap;Web;Soap;$(DCC_Namespace)</DCC_Namespace>
         <SanitizedProjectName>OpenApiDelphiGen</SanitizedProjectName>
-        <DCC_UnitSearchPath>F:\projects\3rdParty\VSoft\CommandLineParser\VSoft.CommandLineParser\Src;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+        <DCC_UnitSearchPath>..\..\..\tms\smartsetup\externals\VSoft.CommandLineParser\Src;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+        <VerInfo_Locale>1033</VerInfo_Locale>
+        <VerInfo_Keys>CompanyName=;FileDescription=$(MSBuildProjectName);FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProgramID=com.embarcadero.$(MSBuildProjectName);ProductName=$(MSBuildProjectName);ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base_Android)'!=''">
         <VerInfo_Keys>package=com.embarcadero.$(MSBuildProjectName);label=$(MSBuildProjectName);versionCode=1;versionName=1.0.0;persistent=False;restoreAnyVersion=False;installLocation=auto;largeHeap=False;theme=TitleBar;hardwareAccelerated=true;apiKey=;minSdkVersion=23;targetSdkVersion=34</VerInfo_Keys>
@@ -164,6 +172,10 @@
         <VerInfo_Locale>1033</VerInfo_Locale>
         <VerInfo_Keys>CompanyName=;FileDescription=$(MSBuildProjectName);FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProgramID=com.embarcadero.$(MSBuildProjectName);ProductName=$(MSBuildProjectName);ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
     </PropertyGroup>
+    <PropertyGroup Condition="'$(Cfg_2_Win32)'!=''">
+        <Manifest_File>(None)</Manifest_File>
+        <AppDPIAwarenessMode>none</AppDPIAwarenessMode>
+    </PropertyGroup>
     <ItemGroup>
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
@@ -202,10 +214,10 @@
                     <Source Name="MainSource">OpenApiDelphiGen.dpr</Source>
                 </Source>
                 <Excluded_Packages>
-                    <Excluded_Packages Name="C:\Users\Public\Documents\Embarcadero\Studio\23.0\Bpl\wPDF5_DX14_Pack.bpl">File C:\Users\Public\Documents\Embarcadero\Studio\23.0\Bpl\wPDF5_DX14_Pack.bpl not found</Excluded_Packages>
+                    <Excluded_Packages Name="$(BDSBIN)\bcboffice2k290.bpl">Embarcadero C++Builder Office 2000 Servers Package</Excluded_Packages>
+                    <Excluded_Packages Name="$(BDSBIN)\bcbofficexp290.bpl">Embarcadero C++Builder Office XP Servers Package</Excluded_Packages>
                     <Excluded_Packages Name="$(BDSBIN)\dcloffice2k290.bpl">Microsoft Office 2000 Sample Automation Server Wrapper Components</Excluded_Packages>
                     <Excluded_Packages Name="$(BDSBIN)\dclofficexp290.bpl">Microsoft Office XP Sample Automation Server Wrapper Components</Excluded_Packages>
-                    <Excluded_Packages Name="F:\TMS-SmartSetUp\.tmssetup\build\bpl\Win32\VCL_TMSVCLGridExcelBridge_DESIGN290.bpl">TMS VCL Grid Excel Bridge (Design)</Excluded_Packages>
                 </Excluded_Packages>
             </Delphi.Personality>
             <Deployment Version="5">
@@ -224,7 +236,6 @@
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
-                <DeployFile LocalName="Win32\Debug\OpenApiDelphiGen.exe" Configuration="Debug" Class="ProjectOutput"/>
                 <DeployFile LocalName="Win32\Debug\OpenApiDelphiGen.exe" Configuration="Debug" Class="ProjectOutput"/>
                 <DeployClass Name="AdditionalDebugSymbols">
                     <Platform Name="iOSSimulator">
@@ -337,6 +348,16 @@
                     </Platform>
                     <Platform Name="Android64">
                         <RemoteDir>res\values-v31</RemoteDir>
+                        <Operation>1</Operation>
+                    </Platform>
+                </DeployClass>
+                <DeployClass Name="AndroidSplashStylesV35">
+                    <Platform Name="Android">
+                        <RemoteDir>res\values-v35</RemoteDir>
+                        <Operation>1</Operation>
+                    </Platform>
+                    <Platform Name="Android64">
+                        <RemoteDir>res\values-v35</RemoteDir>
                         <Operation>1</Operation>
                     </Platform>
                 </DeployClass>
