@@ -260,7 +260,7 @@ begin
 
   // read response
   CodeMethod.DeclareVar('Response', 'IRestResponse');
-  Statements.AddSnippet('Response := Request.Execute');
+  Statements.AddSnippet('Response := ExecuteRequest(Request)');
   Statements.AddSnippet('CheckError(Response)');
   if MetaMethod.ReturnType <> nil then
   begin
@@ -287,7 +287,8 @@ begin
     RouteAttr.AddRawArgument(QuotedStr(MetaMethod.UrlPath));
   end;
 
-  GenerateXmlComments(CodeMethod.Comments, 'summary', MetaMethod.Summary);
+  if Options.ServiceOptions.AddXmlDoc then
+    GenerateXmlComments(CodeMethod.Comments, 'summary', MetaMethod.Summary);
 
   for Param in MetaMethod.Params do
   begin
@@ -311,7 +312,8 @@ begin
   if MetaMethod.ReturnType <> nil then
     CodeMethod.ReturnType.BaseType := MetaMethod.ReturnType.TypeName;
 
-  GenerateXmlComments(CodeMethod.Comments, 'remarks', MetaMethod.Remarks);
+  if Options.ServiceOptions.AddXmlDoc then
+    GenerateXmlComments(CodeMethod.Comments, 'remarks', MetaMethod.Remarks);
 end;
 
 function TOpenApiImporter.CleanId(const S: string): string;
@@ -478,7 +480,8 @@ begin
     if FClientUnit.FindType(Service.InterfaceName) <> nil then
     begin
       CodeMethod := CodeType.AddFunction(Service.ServiceName, Service.InterfaceName, mvPublic);
-      GenerateXmlComments(CodeMethod.Comments, 'summary', Service.Description);
+      if Options.ServiceOptions.AddXmlDoc then
+        GenerateXmlComments(CodeMethod.Comments, 'summary', Service.Description);
     end;
 
   // Generate client class
@@ -538,7 +541,8 @@ begin
   FDtoUnit._Types.Add(CodeType);
   CodeType.Name := ObjType.TypeName;
   CodeType.IsClass := True;
-  GenerateXmlComments(CodeType.Comments, 'summary', ObjType.Description);
+  if Options.DtoOptions.AddXmlDoc then
+    GenerateXmlComments(CodeType.Comments, 'summary', ObjType.Description);
 
   // Declare fields and properties
   for Prop in ObjType.Props do
@@ -832,7 +836,8 @@ begin
     CodeField.AddAttribute('JsonProperty').AddRawArgument(QuotedStr(Prop.RestName));
   end;
 
-  GenerateXmlComments(CodeProp.Comments, 'summary', Prop.Description);
+  if Options.DtoOptions.AddXmlDoc then
+    GenerateXmlComments(CodeProp.Comments, 'summary', Prop.Description);
 
   DoPropCreated(CodeProp, CodeField, CodeType);
 end;
@@ -964,7 +969,8 @@ begin
       Service.InterfaceGuid := StringToGuid(GuidStr);
     except
     end;
-  GenerateXmlComments(Service.Comments, 'summary', MetaService.Description);
+  if Options.ServiceOptions.AddXmlDoc then
+    GenerateXmlComments(Service.Comments, 'summary', MetaService.Description);
 
   if Options.XDataService then
   begin

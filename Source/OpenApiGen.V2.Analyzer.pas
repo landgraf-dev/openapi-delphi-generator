@@ -5,7 +5,7 @@ interface
 uses
   Generics.Collections, SysUtils, Classes, TypInfo, StrUtils,
 
-  Bcl.Logging,
+  Bcl.Logging, Bcl.Collections,
   XData.JSchema.Classes,
   OpenAPI.Classes,
   OpenAPI.Classes.Path,
@@ -47,13 +47,23 @@ procedure TOpenApiAnalyzer.Analyze(ADocument: TOpenApiDocument);
 var
   Path: TPair<string, TPathItem>;
   Definition: TPair<string, TJsonSchema>;
+  Definitions: TOrderedObjectDictionary<string, TJsonSchema>;
+  I: Integer;
 begin
   FDocument := ADocument;
 
   // Build meta information
   MetaClient.Clear;
-  for Definition in Document.Definitions do
+
+  Definitions := Document.Definitions;
+  for I := Definitions.Count - 1 downto 0 do
+  begin
+    if MustExcludeSchema(Definitions.Keys[I]) then
+      Definitions.Delete(I);
+  end;
+  for Definition in Definitions do
     MetaTypeFromSchema(Definition.Value, Definition.Key, TListType.ltAuto);
+
   for Path in Document.Paths do
     ProcessPathItem(Path.Key, Path.Value);
   MetaClient.InterfaceName := Format('I%sClient', [Options.ClientName]);
@@ -276,8 +286,14 @@ begin
   if OperationName = '' then
     OperationName := BuildOperationName(Path, HttpMethod);
 
-  // Find or create the service
+  // Solve names
   DoGetServiceName(ServiceName, ServiceName);
+  DoGetMethodName(MethodName, OperationName);
+
+  if MustExcludeMethod(ServiceName, MethodName) then
+    Exit;
+
+  // Find or create the service
   Service := MetaClient.FindService(ServiceName);
   if Service = nil then
   begin
@@ -292,7 +308,6 @@ begin
   end;
 
   // Method name
-  DoGetMethodName(MethodName, OperationName);
   MetaMethod := TMetaMethod.Create;
   Service.Methods.Add(MetaMethod);
   MetaMethod.CodeName := MethodName;

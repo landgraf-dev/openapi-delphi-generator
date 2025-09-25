@@ -5,7 +5,7 @@ interface
 uses
   Generics.Collections, SysUtils, Classes, TypInfo, StrUtils,
 
-  Bcl.Logging,
+  Bcl.Logging, Bcl.Collections,
   XData.JSchema.Classes,
   OpenAPI.V3.Document,
   OpenAPI.Types,
@@ -27,6 +27,7 @@ type
       const Path: string; PathItem: TPathItem; Operation: TOperation);
   strict protected
     function MetaTypeFromReference(RefSchema: TReferenceSchema; const DefaultTypeName: string; ListType: TListType): IMetaType; override;
+    function ParameterFromReference(RefParam: TReferenceParameter): TParameter;
   public
     procedure Analyze(ADocument: TOpenApiDocument);
     property Document: TOpenApiDocument read FDocument;
@@ -51,6 +52,8 @@ procedure TOpenApiAnalyzer.Analyze(ADocument: TOpenApiDocument);
 var
   Path: TPair<string, TPathItem>;
   Schema: TPair<string, TJsonSchema>;
+  Schemas: TOrderedObjectDictionary<string, TJsonSchema>;
+  I: Integer;
 begin
   FDocument := ADocument;
 
@@ -58,8 +61,17 @@ begin
   MetaClient.Clear;
 
   if (Document.Components <> nil) and (Document.Components.Schemas <> nil) then
-    for Schema in Document.Components.Schemas do
+  begin
+    Schemas := Document.Components.Schemas;
+    for I := Schemas.Count - 1 downto 0 do
+    begin
+      if MustExcludeSchema(Schemas.Keys[I]) then
+        Schemas.Delete(I);
+    end;
+
+    for Schema in Schemas do
       MetaTypeFromSchema(Schema.Value, Schema.Key, TListType.ltAuto);
+  end;
   for Path in Document.Paths do
     ProcessPathItem(Path.Key, Path.Value);
 
@@ -83,9 +95,10 @@ var
   ProducesJson: Boolean;
   ContentPair: TPair<string, TMediaType>;
   BodyParamName: string;
+  SourceParam: TParameter;
 begin
-  if (Operation.Servers <> nil) and (Operation.Servers.Count > 1) then
-    raise Exception.Create('Multiple servers are not yet supported');
+//  if (Operation.Servers <> nil) and (Operation.Servers.Count > 1) then
+//    raise Exception.Create('Multiple servers are not yet supported');
 
   Result := False;
   try
@@ -95,10 +108,19 @@ begin
     if Operation.Parameters <> nil then
       for Param in Operation.Parameters do
       begin
+        SourceParam := Param;
+        if Param is TReferenceParameter then
+          SourceParam := ParameterFromReference(Param as TReferenceParameter);
+
+        // Avoid duplicated parameters
+        if Method.FindParamRest(Param.Name) <> nil then
+          Continue;
+
         MetaParam := TMetaParam.Create;
         Method.Params.Add(MetaParam);
-        MetaParam.Description := Param.Description;
-        BuildMetaParam(MetaParam, Param, Method.CodeName);
+
+        MetaParam.Description := SourceParam.Description;
+        BuildMetaParam(MetaParam, SourceParam, Method.CodeName);
       end;
 
     if Operation.RequestBody <> nil then
@@ -188,9 +210,9 @@ var
   Explode: Boolean;
 begin
   if Param.Schema = nil then
-    raise EOpenApiAnalyzerException.CreateFmt('%.%s: missing schema', [MethodName, Param.Name]);
+    raise EOpenApiAnalyzerException.CreateFmt('%s.%s: missing schema', [MethodName, Param.Name]);
   if Param.Content <> nil then
-    raise EOpenApiAnalyzerException.CreateFmt('%.%s: content property not supported', [MethodName, Param.Name]);
+    raise EOpenApiAnalyzerException.CreateFmt('%s.%s: content property not supported', [MethodName, Param.Name]);
 
   MetaParam.RestName := Param.Name;
   MetaParam.CodeName := ProcessNaming(Param.Name, Options.ServiceOptions.ParamNaming);
@@ -279,8 +301,8 @@ begin
   Result := '/';
   if Document.Servers <> nil then
   begin
-    if Document.Servers.Count > 1 then
-      raise Exception.Create('Multiple servers are not yet supported');
+//    if Document.Servers.Count > 1 then
+//      raise Exception.Create('Multiple servers are not yet supported');
 
     Server := Document.Servers[0];
     Result := Server.Url;
@@ -313,6 +335,16 @@ begin
     Result := MetaTypeFromSchema(ReferencedSchema, DefaultTypeName, ListType);
 end;
 
+function TOpenApiAnalyzer.ParameterFromReference(RefParam: TReferenceParameter): TParameter;
+var
+  ReferencedParameter: TParameter;
+begin
+  if not Document.Components.Parameters.TryGetValue(RefParam.ReferenceName, ReferencedParameter) then
+    raise Exception.CreateFmt('Could not solve parameter reference "%s"', [RefParam.ReferenceName]);
+
+  Result := ReferencedParameter;
+end;
+
 procedure TOpenApiAnalyzer.ProcessOperation(const Path: string; PathItem: TPathItem; Operation: TOperation;
   const HttpMethod: string);
 var
@@ -334,8 +366,14 @@ begin
   if OperationName = '' then
     OperationName := BuildOperationName(Path, HttpMethod);
 
-  // Find or create the service
+  // Solve names
   DoGetServiceName(ServiceName, ServiceName);
+  DoGetMethodName(MethodName, OperationName);
+
+  if MustExcludeMethod(ServiceName, MethodName) then
+    Exit;
+
+  // Find or create the service
   Service := MetaClient.FindService(ServiceName);
   if Service = nil then
   begin
@@ -350,7 +388,6 @@ begin
   end;
 
   // Method name
-  DoGetMethodName(MethodName, OperationName);
   MetaMethod := TMetaMethod.Create;
   Service.Methods.Add(MetaMethod);
   MetaMethod.CodeName := MethodName;
@@ -365,8 +402,8 @@ end;
 
 procedure TOpenApiAnalyzer.ProcessPathItem(const Path: string; PathItem: TPathItem);
 begin
-  if (Document.Servers <> nil) and (Document.Servers.Count > 1) then
-    raise Exception.Create('Multiple servers are not yet supported');
+//  if (Document.Servers <> nil) and (Document.Servers.Count > 1) then
+//    raise Exception.Create('Multiple servers are not yet supported');
 
   ProcessOperation(Path, PathItem, PathItem.Get, 'GET');
   ProcessOperation(Path, PathItem, PathItem.Put, 'PUT');

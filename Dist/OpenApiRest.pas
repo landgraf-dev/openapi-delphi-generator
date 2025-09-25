@@ -88,6 +88,8 @@ type
     property Response: IRestResponse read FResponse;
   end;
 
+  TExecuteRequestProc = reference to procedure(Request: IRestRequest; var Response: IRestResponse);
+
   IRestConfig = interface
   ['{19651CF9-B9EB-44CA-BF22-802D0EBA6549}']
     function GetAccessToken: string;
@@ -98,11 +100,14 @@ type
     procedure SetRequestFactory(const Value: IRestRequestFactory);
     function GetLogger: IRestLogger;
     procedure SetLogger(const Value: IRestLogger);
+    function GetOnExecuteRequest: TExecuteRequestProc;
+    procedure SetOnExecuteRequest(const Value: TExecuteRequestProc);
 
     property BaseUrl: string read GetBaseUrl write SetBaseUrl;
     property AccessToken: string read GetAccessToken write SetAccessToken;
     property RequestFactory: IRestRequestFactory read GetRequestFactory write SetRequestFactory;
     property Logger: IRestLogger read GetLogger write SetLogger;
+    property OnExecuteRequest: TExecuteRequestProc read GetOnExecuteRequest write SetOnExecuteRequest;
   end;
 
   TCustomRestConfig = class(TInterfacedObject, IRestConfig)
@@ -111,6 +116,7 @@ type
     FAccessToken: string;
     FRequestFactory: IRestRequestFactory;
     FLogger: IRestLogger;
+    FOnExecuteRequest: TExecuteRequestProc;
     function GetAccessToken: string;
     function GetBaseUrl: string;
     procedure SetAccessToken(const Value: string);
@@ -119,12 +125,15 @@ type
     procedure SetRequestFactory(const Value: IRestRequestFactory);
     function GetLogger: IRestLogger;
     procedure SetLogger(const Value: IRestLogger);
+    function GetOnExecuteRequest: TExecuteRequestProc;
+    procedure SetOnExecuteRequest(const Value: TExecuteRequestProc);
   public
     constructor Create;
     property BaseUrl: string read GetBaseUrl write SetBaseUrl;
     property AccessToken: string read GetAccessToken write SetAccessToken;
     property RequestFactory: IRestRequestFactory read GetRequestFactory write SetRequestFactory;
     property Logger: IRestLogger read GetLogger write SetLogger;
+    property OnExecuteRequest: TExecuteRequestProc read GetOnExecuteRequest write SetOnExecuteRequest;
   end;
 
   TCustomRestService = class(TInterfacedObject)
@@ -139,7 +148,8 @@ type
   public
     constructor Create(Config: IRestConfig); reintroduce;
     destructor Destroy; override;
-    function CreateRequest(const UrlPath, HttpMethod: string): IRestRequest;
+    function ExecuteRequest(Request: IRestRequest): IRestResponse; virtual;
+    function CreateRequest(const UrlPath, HttpMethod: string): IRestRequest; virtual;
     property Config: IRestConfig read FConfig;
   end;
 
@@ -164,9 +174,11 @@ type
   ['{C0D7EA65-A432-426F-BBCF-6E3723622266}']
     function GetAccessToken: string;
     function GetExpirationTime: TDateTime;
+    function GetRefreshToken: string;
 
     property AccessToken: string read GetAccessToken;
     property ExpirationTime: TDateTime read GetExpirationTime;
+    property RefreshToken: string read GetRefreshToken;
   end;
 
   ITokenProvider = interface
@@ -178,11 +190,15 @@ type
   private
     FAccessToken: string;
     FExpirationTime: TDateTime;
+    FRefreshToken: string;
     function GetAccessToken: string;
     function GetExpirationTime: TDateTime;
+    function GetRefreshToken: string;
   public
-    constructor Create(const AccessToken: string; ExpiresIn: Integer);
+    constructor Create(const AccessToken: string; ExpiresIn: Integer; const RefreshToken: string = ''); overload;
+    constructor Create(const AccessToken: string; ExpirationTime: TDateTime; const RefreshToken: string = ''); overload;
     property AccessToken: string read GetAccessToken;
+    property RefreshToken: string read GetRefreshToken;
     property ExpirationTime: TDateTime read GetExpirationTime;
   end;
 
@@ -195,6 +211,8 @@ type
     procedure SetClientSecret(const Value: string);
     procedure SetScope(const Value: string);
     procedure SetTokenEndpoint(const Value: string);
+
+    function UpdateToken(const RefreshToken: string): ITokenData;
 
     property TokenEndpoint: string read GetTokenEndpoint write SetTokenEndpoint;
     property ClientId: string read GetClientId write SetClientId;
@@ -225,7 +243,9 @@ type
   public
     constructor Create; overload;
     constructor Create(JsonWrapper: TJsonWrapper; ReqFactory: IRestRequestFactory); overload;
+    function ProcessTokenResponse(Response: IRestResponse): ITokenData;
     function RetrieveToken: ITokenData;
+    function UpdateToken(const RefreshToken: string): ITokenData;
     property TokenEndpoint: string read GetTokenEndpoint write SetTokenEndpoint;
     property ClientId: string read GetClientId write SetClientId;
     property ClientSecret: string read GetClientSecret write SetClientSecret;
@@ -297,6 +317,15 @@ destructor TCustomRestService.Destroy;
 begin
   FConverter.Free;
   inherited;
+end;
+
+function TCustomRestService.ExecuteRequest(Request: IRestRequest): IRestResponse;
+begin
+  Result := nil;
+  if Assigned(Config.OnExecuteRequest) then
+    Config.OnExecuteRequest(Request, Result);
+  if not Assigned(Result) then
+    Result := Request.Execute;
 end;
 
 function TCustomRestService.SanitizedBaseUrl: string;
@@ -487,6 +516,11 @@ begin
   Result := FLogger;
 end;
 
+function TCustomRestConfig.GetOnExecuteRequest: TExecuteRequestProc;
+begin
+  Result := FOnExecuteRequest;
+end;
+
 function TCustomRestConfig.GetRequestFactory: IRestRequestFactory;
 begin
   Result := FRequestFactory;
@@ -505,6 +539,11 @@ end;
 procedure TCustomRestConfig.SetLogger(const Value: IRestLogger);
 begin
   FLogger := Value;
+end;
+
+procedure TCustomRestConfig.SetOnExecuteRequest(const Value: TExecuteRequestProc);
+begin
+  FOnExecuteRequest := Value;
 end;
 
 procedure TCustomRestConfig.SetRequestFactory(const Value: IRestRequestFactory);
@@ -527,7 +566,7 @@ end;
 
 { TTokenData }
 
-constructor TTokenData.Create(const AccessToken: string; ExpiresIn: Integer);
+constructor TTokenData.Create(const AccessToken: string; ExpiresIn: Integer; const RefreshToken: string = '');
 begin
   inherited Create;
   FAccessToken := AccessToken;
@@ -535,6 +574,15 @@ begin
     FExpirationTime := IncSecond(Now, ExpiresIn)
   else
     FExpirationTime := MaxDateTime;
+  FRefreshToken := RefreshToken;
+end;
+
+constructor TTokenData.Create(const AccessToken: string; ExpirationTime: TDateTime; const RefreshToken: string);
+begin
+  inherited Create;
+  FAccessToken := AccessToken;
+  FExpirationTime := ExpirationTime;
+  FRefreshToken := RefreshToken;
 end;
 
 function TTokenData.GetAccessToken: string;
@@ -545,6 +593,11 @@ end;
 function TTokenData.GetExpirationTime: TDateTime;
 begin
   Result := FExpirationTime;
+end;
+
+function TTokenData.GetRefreshToken: string;
+begin
+  Result := FRefreshToken;
 end;
 
 { TClientCredentialsTokenProvider }
@@ -588,33 +641,16 @@ procedure TClientCredentialsTokenProvider.Init;
 begin
 end;
 
-function TClientCredentialsTokenProvider.RetrieveToken: ITokenData;
+function TClientCredentialsTokenProvider.ProcessTokenResponse(Response: IRestResponse): ITokenData;
 var
-  Request: IRestRequest;
-  Response: IRestResponse;
   JObj: TJSONValue;
   JProp: TJSONValue;
   JErrorDescription: TJsonValue;
   ErrorDescription: string;
   AccessToken: string;
+  RefreshToken: string;
   ExpiresIn: Integer;
-  Params: string;
 begin
-  Request := RequestFactory.CreateRequest;
-  Request.SetUrl(TokenEndpoint);
-  Request.SetMethod('POST');
-
-  Request.AddHeader('Content-Type', 'application/x-www-form-urlencoded');
-
-  Params := '';
-  OpenApiUtils.AppendQueryParam(Params, 'grant_type', 'client_credentials');
-  OpenApiUtils.AppendQueryParam(Params, 'client_id', ClientId);
-  OpenApiUtils.AppendQueryParam(Params, 'client_secret', ClientSecret);
-  if Scope <> '' then
-    OpenApiUtils.AppendQueryParam(Params, 'scope', Scope);
-  Request.AddBody(Params);
-
-  Response := Request.Execute;
   if (Response.StatusCode < 200) or (Response.StatusCode >= 300) then
     raise EOpenApiClientException.Create('Token request failed with status code ' + IntToStr(Response.StatusCode), Response);
   if not SameText(Response.GetHeader('Content-Type'), 'application/json') then
@@ -643,11 +679,36 @@ begin
         ExpiresIn := Json.IntegerFromJsonValue(JProp)
       else
         ExpiresIn := 0;
-      Result := TTokenData.Create(AccessToken, ExpiresIn);
+      if Json.ObjContains(JObj, 'refresh_token', JProp) then
+        RefreshToken := Json.StringFromJsonValue(JProp);
+      Result := TTokenData.Create(AccessToken, ExpiresIn, RefreshToken);
     end;
   finally
     JObj.Free;
   end;
+end;
+
+function TClientCredentialsTokenProvider.RetrieveToken: ITokenData;
+var
+  Request: IRestRequest;
+  Response: IRestResponse;
+  Params: string;
+begin
+  Request := RequestFactory.CreateRequest;
+  Request.SetUrl(TokenEndpoint);
+  Request.SetMethod('POST');
+
+  Request.AddHeader('Content-Type', 'application/x-www-form-urlencoded');
+  Request.AddHeader('Authorization', 'Basic ' + EncodeBase64(TEncoding.UTF8.GetBytes(ClientId + ':' + ClientSecret)));
+
+  Params := '';
+  OpenApiUtils.AppendQueryParam(Params, 'grant_type', 'client_credentials');
+  if Scope <> '' then
+    OpenApiUtils.AppendQueryParam(Params, 'scope', Scope);
+  Request.AddBody(Params);
+
+  Response := Request.Execute;
+  Result := ProcessTokenResponse(Response);
 end;
 
 procedure TClientCredentialsTokenProvider.SetClientId(const Value: string);
@@ -668,6 +729,31 @@ end;
 procedure TClientCredentialsTokenProvider.SetTokenEndpoint(const Value: string);
 begin
   FTokenEndpoint := Value;
+end;
+
+function TClientCredentialsTokenProvider.UpdateToken(const RefreshToken: string): ITokenData;
+var
+  Request: IRestRequest;
+  Response: IRestResponse;
+  Params: string;
+begin
+  Request := RequestFactory.CreateRequest;
+  Request.SetUrl(TokenEndpoint);
+  Request.SetMethod('POST');
+
+  Request.AddHeader('Content-Type', 'application/x-www-form-urlencoded');
+  if (ClientId <> '') or(ClientSecret <> '') then
+    Request.AddHeader('Authorization', 'Basic ' + EncodeBase64(TEncoding.UTF8.GetBytes(ClientId + ':' + ClientSecret)));
+
+  Params := '';
+  OpenApiUtils.AppendQueryParam(Params, 'grant_type', 'refresh_token');
+  OpenApiUtils.AppendQueryParam(Params, 'refresh_token', RefreshToken);
+  if Scope <> '' then
+    OpenApiUtils.AppendQueryParam(Params, 'scope', Scope);
+  Request.AddBody(Params);
+
+  Response := Request.Execute;
+  Result := ProcessTokenResponse(Response);
 end;
 
 end.

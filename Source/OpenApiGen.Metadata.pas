@@ -138,13 +138,17 @@ type
   TObjectMetaType = class(TMetaType)
   private
     FTypeName: string;
-    FProps: TList<TMetaProperty>;
+    FProps: TObjectList<TMetaProperty>;
+    function GetOwnedProps: Boolean;
+    procedure SetOwnedProps(const Value: Boolean);
+    function GetProps: TList<TMetaProperty>;
   public
     constructor Create(const ATypeName: string);
     destructor Destroy; override;
     function TypeName: string; override;
     function IsManaged: Boolean; override;
-    property Props: TList<TMetaProperty> read FProps;
+    property Props: TList<TMetaProperty> read GetProps;
+    property OwnedProps: Boolean read GetOwnedProps write SetOwnedProps;
   end;
 
   TArrayMetaType = class(TMetaType, ICountableMetaType)
@@ -200,6 +204,7 @@ type
   public
     constructor Create;
     destructor Destroy; override;
+    function FindParamRest(const Name: string): TMetaParam;
     property CodeName: string read FCodeName write FCodeName;
     property HttpMethod: string read FHttpMethod write FHttpMethod;
     property Params: TList<TMetaParam> read FParams;
@@ -383,9 +388,24 @@ begin
   inherited;
 end;
 
+function TObjectMetaType.GetOwnedProps: Boolean;
+begin
+  Result := FProps.OwnsObjects;
+end;
+
+function TObjectMetaType.GetProps: TList<TMetaProperty>;
+begin
+  Result := FProps;
+end;
+
 function TObjectMetaType.IsManaged: Boolean;
 begin
   Result := True;
+end;
+
+procedure TObjectMetaType.SetOwnedProps(const Value: Boolean);
+begin
+  FProps.OwnsObjects := Value;
 end;
 
 function TObjectMetaType.TypeName: string;
@@ -497,6 +517,16 @@ destructor TMetaMethod.Destroy;
 begin
   FParams.Free;
   inherited;
+end;
+
+function TMetaMethod.FindParamRest(const Name: string): TMetaParam;
+var
+  Param: TMetaParam;
+begin
+  for Param in Params do
+    if SameText(Name, Param.RestName) then
+      Exit(Param);
+  Result := nil;
 end;
 
 { TMetaService }

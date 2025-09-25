@@ -39,12 +39,14 @@ type
     FClassNaming: TNamingOptions;
     FPropNaming: TNamingOptions;
     FFieldNaming: TNamingOptions;
+    FAddXmlDoc: Boolean;
   public
     constructor Create;
     destructor Destroy; override;
     property ClassNaming: TNamingOptions read FClassNaming;
     property PropNaming: TNamingOptions read FPropNaming;
     property FieldNaming: TNamingOptions read FFieldNaming;
+    property AddXmlDoc: Boolean read FAddXmlDoc write FAddXmlDoc;
   end;
 
   TServiceOptions = class
@@ -56,6 +58,7 @@ type
     FClassNaming: TNamingOptions;
     FParamNaming: TNamingOptions;
     FInterfaceGuids: TStringMapping;
+    FAddXmlDoc: Boolean;
   public
     constructor Create;
     destructor Destroy; override;
@@ -66,6 +69,7 @@ type
     property ParamNaming: TNamingOptions read FParamNaming;
     property SolvingMode: TServiceSolvingMode read FSolvingMode write FSolvingMode;
     property InterfaceGuids: TStringMapping read FInterfaceGuids;
+    property AddXmlDoc: Boolean read FAddXmlDoc write FAddXmlDoc;
   end;
 
   TGeneratorOptions = class
@@ -84,6 +88,10 @@ type
     FDtoOptions: TDtoOptions;
     FServiceOptions: TServiceOptions;
     FXDataService: Boolean;
+    FExcludeSchemas: TArray<string>;
+    FExcludeProps: TArray<string>;
+    FExcludeMethods: TArray<string>;
+    FForceInt64: Boolean;
   public
     constructor Create;
     destructor Destroy; override;
@@ -92,6 +100,10 @@ type
     property DtoOptions: TDtoOptions read FDtoOptions;
     property ServiceOptions: TServiceOptions read FServiceOptions;
     property XDataService: Boolean read FXDataService write FXDataService;
+    property ExcludeSchemas: TArray<string> read FExcludeSchemas write FExcludeSchemas;
+    property ExcludeProps: TArray<string> read FExcludeProps write FExcludeProps;
+    property ExcludeMethods: TArray<string> read FExcludeMethods write FExcludeMethods;
+    property ForceInt64: Boolean read FForceInt64 write FForceInt64;
   end;
 
 implementation
@@ -113,6 +125,8 @@ begin
   FFieldNaming.FormatString := 'F%s';
 
   FPropNaming.PascalCase := True;
+
+  FAddXmlDoc := True;
 end;
 
 destructor TDtoOptions.Destroy;
@@ -147,6 +161,8 @@ begin
   ParamNaming.PascalCase := True;
 
   ServiceNaming.PascalCase := True;
+
+  AddXmlDoc := True;
 end;
 
 destructor TServiceOptions.Destroy;

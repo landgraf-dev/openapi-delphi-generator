@@ -42,6 +42,10 @@ type
     procedure DoGetInterfaceName(var InterfaceName: string; const Original: string);
     procedure DoGetServiceClassName(var ServiceClassName: string; const Original: string);
 
+    function MustExcludeSchema(const Name: string): Boolean;
+    function MustExcludeProp(const TypeName, PropName: string): Boolean;
+    function MustExcludeMethod(const ServiceName, MethodName: string): Boolean;
+
     function MetaTypeFromSchema(Schema: TJsonSchema; const DefaultTypeName: string; ListType: TListType): IMetaType;
     function MetaTypeFromString(const Format: string): IMetaType;
     function MetaTypeFromInteger(const Format: string): IMetaType;
@@ -74,6 +78,7 @@ function ToPascalCase(const S: string): string;
 implementation
 
 uses
+  Masks,
   Bcl.Code.DelphiGenerator,
   Bcl.Utils;
 
@@ -81,7 +86,7 @@ function ToPascalCase(const S: string): string;
 var
   I: Integer;
   Convert: Boolean;
- begin
+begin
   I := 1;
   Result := '';
   Convert := True;
@@ -226,7 +231,7 @@ end;
 
 function TOpenApiCustomAnalyzer.MetaTypeFromInteger(const Format: string): IMetaType;
 begin
-  if Format = 'int64' then
+  if (Format = 'int64') or Options.ForceInt64 then
     Result := TInt64MetaType.Create
   else
     Result := TIntegerMetaType.Create;
@@ -257,6 +262,9 @@ begin
 
   for SchemaProp in Schema.Properties do
   begin
+    if MustExcludeProp(Name, SchemaProp.Key) then
+      Continue;
+
     MetaProp := TMetaProperty.Create;
     ObjType.Props.Add(MetaProp);
 
@@ -269,6 +277,8 @@ begin
     MetaProp.Description := SchemaProp.Value.Description;
     MetaProp.Required := Schema.Required.IndexOf(SchemaProp.Key) >= 0;
     MetaProp.PropType := MetaTypeFromSchema(SchemaProp.Value, Name + PropName, TListType.ltList);
+    if MetaProp.PropType = nil then
+      raise Exception.Create('Error Message');
     if Options.XDataService and not MetaProp.Required and not MetaProp.PropType.IsManaged then
       MetaProp.PropType := TNullableMetaType.Create(MetaProp.PropType);
 
@@ -292,6 +302,7 @@ var
   SubObjectType: TObjectMetaType;
   SubSchema: TJsonSchema;
   SubType: IMetaType;
+  I: Integer;
 begin
   if Schema = nil then
     raise EOpenApiAnalyzerException.Create('Schema not defined');
@@ -329,7 +340,7 @@ begin
     begin
       if Schemas.Count > 1 then
         Logger.Warning(Format('OneOf for type %s has multiple schemas, picking the first schema in list', [DefaultTypeName]));
-      Result := MetaTypeFromSchema(Schemas[0], DefaultTypeName, ListType);
+      Result := MetaTypeFromSchema(Schemas[0], DefaultTypeName + 'OneOf', ListType);
     end;
   end
   {else
@@ -353,20 +364,23 @@ begin
 
     Result := MetaTypeFromObject(DefaultTypeName, nil);
     ObjectType := TObjectMetaType(Result);
+    ObjectType.OwnedProps := False;
 
+    I := 0;
     for SubSchema in Schemas do
     begin
-      SubType := MetaTypeFromSchema(SubSchema, DefaultTypeName, ListType);
+      SubType := MetaTypeFromSchema(SubSchema, DefaultTypeName + 'AllOf' + IntToStr(I), ListType);
       if SubType is TObjectMetaType then
       begin
         SubObjectType := TObjectMetaType(SubType);
         for Prop in SubObjectType.Props do
-          ObjectType.Props.Add(Prop.Clone);
+          ObjectType.Props.Add(Prop);
       end
       else if Schemas.Count > 1 then
         raise EOpenApiAnalyzerException.Create('Only one non-object property allowed in AllOf schema')
       else
         Exit(SubType);
+      Inc(I);
     end;
   end
   else
@@ -392,6 +406,41 @@ begin
     Result := TBytesMetaType.Create
   else
     Result := TStringMetaType.Create;
+end;
+
+function TOpenApiCustomAnalyzer.MustExcludeMethod(const ServiceName,
+  MethodName: string): Boolean;
+var
+  Exclude: string;
+  QualifiedName: string;
+begin
+  QualifiedName := ServiceName + '.' + MethodName;
+  for Exclude in Options.ExcludeMethods do
+    if (QualifiedName = Exclude) or MatchesMask(QualifiedName, Exclude, True) then
+      Exit(True);
+  Result := False;
+end;
+
+function TOpenApiCustomAnalyzer.MustExcludeProp(const TypeName, PropName: string): Boolean;
+var
+  Exclude: string;
+  QualifiedName: string;
+begin
+  QualifiedName := TypeName + '.' + PropName;
+  for Exclude in Options.ExcludeProps do
+    if (QualifiedName = Exclude) or MatchesMask(QualifiedName, Exclude, True) then
+      Exit(True);
+  Result := False;
+end;
+
+function TOpenApiCustomAnalyzer.MustExcludeSchema(const Name: string): Boolean;
+var
+  Exclude: string;
+begin
+  for Exclude in Options.ExcludeSchemas do
+    if (Name = Exclude) or MatchesMask(Name, Exclude, True) then
+      Exit(True);
+  Result := False;
 end;
 
 function TOpenApiCustomAnalyzer.ProcessNaming(const S: string; Options: TNamingOptions): string;
