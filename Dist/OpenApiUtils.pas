@@ -386,7 +386,15 @@ begin
 
     Result := TryEncodeDate(Year, Month, Day, TempDate);
     if Result then
-      DateTime := TempDate;
+      DateTime := TempDate
+    else
+    // handle special case where all digits are zero, in this case consider it a "null" date.
+    // In case of Delphi, that would be the oldest possible date.
+    if (Year = 0) and (Month = 0) and (Day = 0) then
+    begin
+      DateTime := 0;
+      Result := True;
+    end;
   end;
 end;
 
