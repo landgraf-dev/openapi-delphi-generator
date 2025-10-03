@@ -135,19 +135,24 @@ type
     property Description: string read FDescription write FDescription;
   end;
 
+  TMetaProperties = class(TObjectList<TMetaProperty>)
+  public
+    function FindByPropName(const Name: string): TMetaProperty;
+  end;
+
   TObjectMetaType = class(TMetaType)
   private
     FTypeName: string;
-    FProps: TObjectList<TMetaProperty>;
+    FProps: TMetaProperties;
     function GetOwnedProps: Boolean;
     procedure SetOwnedProps(const Value: Boolean);
-    function GetProps: TList<TMetaProperty>;
+    function GetProps: TMetaProperties;
   public
     constructor Create(const ATypeName: string);
     destructor Destroy; override;
     function TypeName: string; override;
     function IsManaged: Boolean; override;
-    property Props: TList<TMetaProperty> read GetProps;
+    property Props: TMetaProperties read GetProps;
     property OwnedProps: Boolean read GetOwnedProps write SetOwnedProps;
   end;
 
@@ -379,7 +384,7 @@ constructor TObjectMetaType.Create(const ATypeName: string);
 begin
   inherited Create;
   FTypeName := ATypeName;
-  FProps := TObjectList<TMetaProperty>.Create(True);
+  FProps := TMetaProperties.Create(True);
 end;
 
 destructor TObjectMetaType.Destroy;
@@ -393,7 +398,7 @@ begin
   Result := FProps.OwnsObjects;
 end;
 
-function TObjectMetaType.GetProps: TList<TMetaProperty>;
+function TObjectMetaType.GetProps: TMetaProperties;
 begin
   Result := FProps;
 end;
@@ -637,6 +642,18 @@ begin
   for Service in Services do
     if SameText(Name, Service.ServiceName) then
       Exit(Service);
+  Result := nil;
+end;
+
+{ TMetaProperties }
+
+function TMetaProperties.FindByPropName(const Name: string): TMetaProperty;
+var
+  Prop: TMetaProperty;
+begin
+  for Prop in Self do
+    if SameText(Prop.PropName, Name) then
+      Exit(Prop);
   Result := nil;
 end;
 

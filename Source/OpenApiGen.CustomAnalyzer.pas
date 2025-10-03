@@ -298,6 +298,7 @@ function TOpenApiCustomAnalyzer.MetaTypeFromSchema(Schema: TJsonSchema; const De
 var
   ObjectType: TObjectMetaType;
   Prop: TMetaProperty;
+  ExistingProp: TMetaProperty;
   Schemas: TList<TJsonSchema>;
   SubObjectType: TObjectMetaType;
   SubSchema: TJsonSchema;
@@ -343,18 +344,6 @@ begin
       Result := MetaTypeFromSchema(Schemas[0], DefaultTypeName + 'OneOf', ListType);
     end;
   end
-  {else
-  // MetaTypeFromSchema(Schema, DefaultTypeName, ListType)
-  if (Schema is TAllOfSchema) and
-     (TAllOfSchema(Schema).AllOf.Count = 1) then
-  begin
-      // Delegate to the referenced schema and return its type
-      Exit(
-        MetaTypeFromSchema(
-          TAllOfSchema(Schema).AllOf[0],
-          DefaultTypeName,
-          ListType));
-  end}
   else
   if Schema is TAllOfSchema then
   begin
@@ -374,7 +363,17 @@ begin
       begin
         SubObjectType := TObjectMetaType(SubType);
         for Prop in SubObjectType.Props do
-          ObjectType.Props.Add(Prop);
+        begin
+          ExistingProp := ObjectType.Props.FindByPropName(Prop.PropName);
+          if ExistingProp = nil then
+            ObjectType.Props.Add(Prop)
+          else
+          if ExistingProp.PropType.TypeName <> Prop.PropType.TypeName then
+            raise Exception.CreateFmt('AllOf type %s has two properties named %s of different types (%s and %s',
+              [DefaultTypeName, Prop.PropName, Prop.PropType.TypeName, ExistingProp.PropType.TypeName]);
+        end;
+
+
       end
       else if Schemas.Count > 1 then
         raise EOpenApiAnalyzerException.Create('Only one non-object property allowed in AllOf schema')
