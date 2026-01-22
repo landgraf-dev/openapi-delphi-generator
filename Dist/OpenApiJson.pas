@@ -22,7 +22,11 @@ uses
   {$IFDEF USEDBX}
     Data.DBXJSON,
   {$ELSE}
-    System.JSON,
+    {$IFDEF USEJDO}
+      JsonDataObjects,
+    {$ELSE}
+      System.JSON,
+    {$ENDIF}
   {$ENDIF}
 {$ENDIF}
   SysUtils;
@@ -35,7 +39,14 @@ type
   {$IFDEF USEDBX}
     TJSONValue = Data.DBXJSON.TJSONValue;
   {$ELSE}
-    TJSONValue = System.JSON.TJSONValue;
+    {$IFDEF USEJDO}
+      // TJsonBaseObject can be TJsonObject or JsonArray or TJsonPrimitiveValue
+      // TJsonPrimitiveValue is just used as transport-wrapper around TJsonDataValueHelper (released after use)
+      // TJsonDataValueHelper can handle pointer existing instance of dataobjects within FIntern, so it should be pretty fast but confusing on debugging
+      TJSONValue = JsonDataObjects.TJsonBaseObject;
+    {$ELSE}
+      TJSONValue = System.JSON.TJSONValue;
+    {$ENDIF}
   {$ENDIF}
 {$ENDIF}
 
@@ -152,7 +163,19 @@ begin
 {$IFDEF FPC}
   TJSONArray(JArr).Add(Value);
 {$ELSE}
+  {$IFDEF USEJDO}
+  if Value is TJsonObject then
+    TJSONArray(JArr).Add(TJsonObject(Value));
+  if Value is TJsonArray then
+    TJSONArray(JArr).Add(TJsonArray(Value));
+  if JArr is TJsonPrimitiveValue then
+  begin
+    TJSONArray(JArr).Add(TJsonPrimitiveValue(Value).Value.VariantValue);
+    Value.Free;
+  end;
+  {$ELSE}
   TJSONArray(JArr).AddElement(Value);
+  {$ENDIF}
 {$ENDIF}
 end;
 
@@ -161,7 +184,20 @@ begin
 {$IFDEF USEDBX}
   Result := TJSONArray(JArr).Get(Index);
 {$ELSE}
+{$IFDEF USEJDO}
+  if (TJSONArray(JArr).Types[Index] = TJsonDataType.jdtObject) then
+    Result:= TJSONArray(JArr).O[Index]
+  else
+    if (TJSONArray(JArr).types[Index] = TJsonDataType.jdtArray) then
+      Result:= TJSONArray(JArr).A[Index]
+    else
+    begin
+      Result:= TJsonPrimitiveValue.Create;
+      TJsonPrimitiveValue(Result).Value:= TJSONArray(JArr).Values[Index];
+    end;
+{$ELSE}
   Result := TJSONArray(JArr).Items[Index];
+{$ENDIF}
 {$ENDIF}
 end;
 
@@ -181,7 +217,12 @@ begin
 {$IFDEF NOJSONBOOL}
     Result := Value is TJSONTrue;
 {$ELSE}
+  {$IFDEF USEJDO}
+    Result:= TJsonPrimitiveValue(Value).Value;
+    Value.Free;
+  {$ELSE}
     Result := TJSONBool(Value).AsBoolean
+  {$ENDIF}
 {$ENDIF}
   end
   else
@@ -196,10 +237,15 @@ begin
   else
     Result := TJSONBool.Create(False);
 {$ELSE}
+  {$IFDEF USEJDO}
+  Result := TJsonPrimitiveValue.Create;
+  TJsonPrimitiveValue(Result).Value := Value;
+  {$ELSE}
   if Value then
     Result := TJSONTrue.Create
   else
     Result := TJSONFalse.Create;
+  {$ENDIF}
 {$ENDIF}
 end;
 
@@ -210,7 +256,11 @@ end;
 
 function TJsonWrapper.CreateNull: TJSONValue;
 begin
+{$IFDEF USEJDO}
+  Result := TJsonPrimitiveValue.Create; // no content, type none
+{$ELSE}
   Result := TJSONNull.Create;
+{$ENDIF}
 end;
 
 function TJsonWrapper.CreateObject: TJSONValue;
@@ -225,7 +275,12 @@ begin
 {$IFDEF FPC}
     Result := TJSONNumber(Value).AsFloat;
 {$ELSE}
+  {$IFDEF USEJDO}
+    Result:= TJsonPrimitiveValue(Value).Value;
+    Value.Free;
+  {$ELSE}
     Result := TJSONNumber(Value).AsDouble;
+  {$ENDIF}
 {$ENDIF}
 end;
 
@@ -234,7 +289,12 @@ begin
 {$IFDEF FPC}
   Result := TJSONFloatNumber.Create(Value);
 {$ELSE}
+  {$IFDEF USEJDO}
+  Result := TJsonPrimitiveValue.Create;
+  TJsonPrimitiveValue(Result).Value:= Value;
+  {$ELSE}
   Result := TJSONNumber.Create(Value);
+  {$ENDIF}
 {$ENDIF}
 end;
 
@@ -245,8 +305,13 @@ begin
   if IsNumber(Value) then
     Result := TJSONNumber(Value).AsInt64;
 {$ELSE}
+  {$IFDEF USEJDO}
+  Result:= TJsonPrimitiveValue(Value).Value;
+  Value.Free;
+  {$ELSE}
   if IsNumber(Value) and not IsFloatingPoint(TJSONNumber(Value).Value) then
     Result := TJSONNumber(Value).AsInt64;
+  {$ENDIF}
 {$ENDIF}
 end;
 
@@ -255,7 +320,12 @@ begin
 {$IFDEF FPC}
   Result := TJSONInt64Number.Create(Value);
 {$ELSE}
+  {$IFDEF USEJDO}
+  Result := TJsonPrimitiveValue.Create;
+  TJsonPrimitiveValue(Result).Value:= Value;
+  {$ELSE}
   Result := TJSONNumber.Create(Value);
+  {$ENDIF}
 {$ENDIF}
 end;
 
@@ -266,8 +336,13 @@ begin
   if IsNumber(Value) then
     Result := TJSONNumber(Value).AsInteger;
 {$ELSE}
+  {$IFDEF USEJDO}
+  Result:= TJsonPrimitiveValue(Value).Value;
+  Value.Free;
+  {$ELSE}
   if IsNumber(Value) and not IsFloatingPoint(TJSONNumber(Value).Value) then
     Result := TJSONNumber(Value).AsInt;
+  {$ENDIF}
 {$ENDIF}
 end;
 
@@ -276,7 +351,12 @@ begin
 {$IFDEF FPC}
   Result := TJSONIntegerNumber.Create(Value);
 {$ELSE}
+  {$IFDEF USEJDO}
+  Result := TJsonPrimitiveValue.Create;
+  TJsonPrimitiveValue(Result).Value:= Value;
+  {$ELSE}
   Result := TJSONNumber.Create(Value);
+  {$ENDIF}
 {$ENDIF}
 end;
 
@@ -290,7 +370,11 @@ begin
 {$IFDEF NOJSONBOOL}
   Result := (Value is TJSONTrue) or (Value is TJSONFalse);
 {$ELSE}
+  {$IFDEF USEJDO}
+  Result := (TJsonPrimitiveValue(Value).Value.Typ = TJsonDataType.jdtBool);
+  {$ELSE}
   Result := Value is TJSONBool;
+  {$ENDIF}
 {$ENDIF}
 end;
 
@@ -307,22 +391,41 @@ end;
 
 function TJsonWrapper.IsNull(Value: TJSONValue): Boolean;
 begin
+{$IFDEF USEJDO}
+  Result:= (Value = nil) or (TJsonPrimitiveValue(Value).Value.Typ = TJsonDataType.jdtNone);
+{$ELSE}
   Result := Value is TJSONNull;
+{$ENDIF}
 end;
 
 function TJsonWrapper.IsNumber(Value: TJSONValue): Boolean;
 begin
+{$IFDEF USEJDO}
+  Result := (TJsonPrimitiveValue(Value).Value.Typ = TJsonDataType.jdtInt) or
+            (TJsonPrimitiveValue(Value).Value.Typ = TJsonDataType.jdtLong) or
+            (TJsonPrimitiveValue(Value).Value.Typ = TJsonDataType.jdtULong) or
+            (TJsonPrimitiveValue(Value).Value.Typ = TJsonDataType.jdtFloat);
+{$ELSE}
   Result := Value is TJSONNumber;
+{$ENDIF}
 end;
 
 function TJsonWrapper.IsObject(Value: TJSONValue): Boolean;
 begin
+{$IFDEF USEJDO}
   Result := Value is TJSONObject;
+{$ELSE}
+  Result := Value is TJSONObject;
+{$ENDIF}
 end;
 
 function TJsonWrapper.IsString(Value: TJSONValue): Boolean;
 begin
+{$IFDEF USEJDO}
+  Result := (TJsonPrimitiveValue(Value).Value.Typ = TJsonDataType.jdtString);
+{$ELSE}
   Result := Value is TJSONString;
+{$ENDIF}
 end;
 
 function TJsonWrapper.JsonToJsonValue(const Value: string): TJSONValue;
@@ -330,7 +433,11 @@ begin
 {$IFDEF FPC}
   Result := fpjson.GetJSON(Value);
 {$ELSE}
+  {$IFDEF USEJDO}
+  Result:= TJsonObject.Parse(Value);
+  {$ELSE}
   Result := TJSONObject.ParseJSONValue(Value);
+  {$ENDIF}
 {$ENDIF}
 end;
 
@@ -339,7 +446,19 @@ begin
 {$IFDEF FPC}
   Result := Value.AsJSON;
 {$ELSE}
+  {$IFDEF USEJDO}
+  if Value is TJsonObject then
+    Result:= TJsonObject(Value).ToJSON;
+  if Value is TJsonArray then
+    Result:= TJsonArray(Value).ToJSON;
+  if Value is TJsonPrimitiveValue then
+  begin
+    Result:= TJsonPrimitiveValue(Value).ToJSON;
+    Value.Free;
+  end;
+  {$ELSE}
   Result := Value.ToString;
+  {$ENDIF}
 {$ENDIF}
 end;
 
@@ -348,7 +467,19 @@ begin
 {$IFDEF FPC}
   TJSONObject(JObj).Add(Name, Value);
 {$ELSE}
+  {$IFDEF USEJDO}
+  if Value is TJsonObject then
+   TJSONObject(JObj).Values[Name] := TJsonObject(Value);
+  if Value is TJsonArray then
+   TJSONObject(JObj).Values[Name] := TJsonArray(Value);
+  if Value is TJsonPrimitiveValue then
+  begin
+   TJSONObject(JObj).Values[Name] := TJsonPrimitiveValue(Value).Value.VariantValue;
+   Value.Free
+  end;
+  {$ELSE}
   TJSONObject(JObj).AddPair(Name, Value);
+  {$ENDIF}
 {$ENDIF}
 end;
 
@@ -357,11 +488,35 @@ function TJsonWrapper.ObjContains(JObj: TJSONValue; const Name: string; out Valu
 var
   Pair: TJSONPair;
 {$ENDIF}
+{$IFDEF USEJDO}
+var
+  i: integer;
+{$ENDIF}
 begin
 {$IFDEF FPC}
   Value := TJSONObject(JObj).Find(Name);
   Result := Value <> nil;
 {$ELSE}
+  {$IFDEF USEJDO}
+  Value:= nil;
+  i:= TJSONObject(JObj).indexof(name);
+  if (i > 0) and (TJSONObject(JObj).types[name] = TJsonDataType.jdtObject) then
+    Value:= TJSONObject(JObj).O[name]
+  else
+    if (i > 0) and (TJSONObject(JObj).types[name] = TJsonDataType.jdtArray) then
+      Value:= TJSONObject(JObj).A[name]
+    else
+    begin
+      Result:= TJSONObject(JObj).IndexOf(name)>-1;
+      Value:= nil;
+      if Result then
+      begin
+        Value:= TJsonPrimitiveValue.Create;
+        TJsonPrimitiveValue(Value).Value:= TJSONObject(JObj).Values[name];
+      end;
+    end;
+  Result := Value <> nil;
+  {$ELSE}
   {$IFDEF USEDBX}
   Pair := TJSONObject(JObj).Get(Name);
   if Assigned(Pair) then
@@ -372,20 +527,31 @@ begin
   Value := TJSONObject(JObj).GetValue(Name);
   {$ENDIF}
   Result := Value <> nil;
+  {$ENDIF}
 {$ENDIF}
 end;
 
 function TJsonWrapper.StringFromJsonValue(Value: TJSONValue): string;
 begin
+{$IFDEF USEJDO}
+  Result:= TJsonPrimitiveValue(Value).Value;
+  Value.Free;
+{$ELSE}
   if IsString(Value) then
     Result := TJSONString(Value).Value
   else
     Result := '';
+{$ENDIF}
 end;
 
 function TJsonWrapper.StringToJsonValue(const Value: string): TJSONValue;
 begin
+{$IFDEF USEJDO}
+  Result := TJsonPrimitiveValue.Create;
+  TJsonPrimitiveValue(Result).Value:= Value;
+{$ELSE}
   Result := TJSONString.Create(Value);
+{$ENDIF}
 end;
 
 { TCustomJsonConverter }
