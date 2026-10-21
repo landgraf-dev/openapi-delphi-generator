@@ -500,10 +500,10 @@ begin
   {$IFDEF USEJDO}
   Value:= nil;
   i:= TJSONObject(JObj).indexof(name);
-  if (i > 0) and (TJSONObject(JObj).types[name] = TJsonDataType.jdtObject) then
+  if (i > -1) and (TJSONObject(JObj).types[name] = TJsonDataType.jdtObject) then
     Value:= TJSONObject(JObj).O[name]
   else
-    if (i > 0) and (TJSONObject(JObj).types[name] = TJsonDataType.jdtArray) then
+    if (i > -1) and (TJSONObject(JObj).types[name] = TJsonDataType.jdtArray) then
       Value:= TJSONObject(JObj).A[name]
     else
     begin
